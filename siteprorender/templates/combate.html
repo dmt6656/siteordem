@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Combate — Ordem Paranormal</title>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}?v={{ asset_version('favicon.svg') }}">
+        <link rel="alternate icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}?v={{ asset_version('favicon.png') }}">
+        <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}?v={{ asset_version('favicon.png') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version('style.css') }}">
+        <script src="{{ url_for('static', filename='notify.js') }}?v={{ asset_version('notify.js') }}"></script>
+    </head>
+    <body class="{{ 'sem-sanidade' if sem_sanidade else '' }}">
+        <div class="container">
+            <header>
+                <h1>Combate</h1>
+                <div class="header-actions">
+                    {% if session.get('is_admin') %}<a href="{{ url_for('admin_log') }}"{{ ' class="active"'|safe if request.endpoint == 'admin_log' }}>Log</a>{% endif %}
+                    <a href="{{ url_for('logout') }}">Sair</a>
+                </div>
+            </header>
+
+            <nav class="tab-nav">
+                <a href="{{ url_for('admin_panel') if session.get('is_admin') else url_for('player_panel') }}" class="tab-link">Painel</a>
+                <a href="{{ url_for('pericias_panel') }}" class="tab-link">Perícias</a>
+                <a href="{{ url_for('combate_panel') }}" class="tab-link active" id="nav-chat-link">Combate<span class="tab-unread-dot" id="nav-chat-unread"></span></a>
+                <a href="{{ url_for('agentes_panel') }}" class="tab-link">Agentes</a>
+                <a href="{{ url_for('campanha_panel') }}" class="tab-link">Campanha</a>
+                <a href="{{ url_for('mural_panel') }}" class="tab-link">Mural</a>
+                <a href="{{ url_for('anotacoes_panel') }}" class="tab-link">Anotações</a>
+                <a href="{{ url_for('portrait_panel') }}" class="tab-link">Portrait</a>
+            </nav>
+
+            {% if session.get('is_admin') %}
+                <div class="panel-section combat-admin-section">
+                    <div class="section-title">Gerenciar Combate</div>
+
+                    <div class="combat-add-group">
+                        <div class="combat-add-box">
+                            <div class="section-subtitle">Adicionar Agente</div>
+                            <form class="npc-add-form combat-form-inline" method="POST" action="{{ url_for('combate_add_agente') }}">
+                                <select name="user_id" required {{ 'disabled' if not available_users }}>
+                                    <option value="" disabled selected>Escolher agente...</option>
+                                    {% for u in available_users %}
+                                        <option value="{{ u['id'] }}">{{ u['character_name'] or u['username'] }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" {{ 'disabled' if not available_users }}>Adicionar</button>
+                            </form>
+                            {% if not available_users %}
+                                <p class="empty combat-empty-hint">Todos os agentes já estão no combate.</p>
+                            {% endif %}
+
+                            <div class="section-subtitle combat-subtitle-spaced">Adicionar NPC de Suporte</div>
+                            <form class="npc-add-form" method="POST" action="{{ url_for('combate_add_npc') }}">
+                                <div class="combat-form-row">
+                                    <select name="npc_id" required {{ 'disabled' if not available_npcs }}>
+                                        <option value="" disabled selected>Escolher NPC...</option>
+                                        {% for n in available_npcs %}
+                                            <option value="{{ n['id'] }}">{{ n['name'] }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label class="combat-bonus-field combat-vd-field">
+                                        <input type="number" name="initiative_bonus" placeholder="Bônus" step="1" class="combat-bonus-input" title="Somado ao d20 quando a iniciativa deste NPC for rolada" {{ 'disabled' if not available_npcs }}>
+                                    </label>
+                                    <button type="submit" {{ 'disabled' if not available_npcs }}>Adicionar</button>
+                                </div>
+                                <label class="lock-checkbox combat-hide-initiative" title="Os jogadores não veem o valor da iniciativa deste NPC (você pode revelar depois)">
+                                    <input type="checkbox" name="hide_initiative" {{ 'disabled' if not available_npcs }}> Ocultar iniciativa dos jogadores
+                                </label>
+                            </form>
+                            {% if not has_npcs %}
+                                <p class="empty combat-empty-hint">Nenhum NPC cadastrado na Equipe de Suporte.</p>
+                            {% elif not available_npcs %}
+                                <p class="empty combat-empty-hint">Todos os NPCs já estão no combate.</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="combat-add-box">
+                            <div class="section-subtitle">Adicionar Monstro / Inimigo</div>
+                            <form class="npc-add-form" method="POST" action="{{ url_for('combate_add_criatura') }}" enctype="multipart/form-data">
+                                <div class="combat-form-row combat-type-name-row">
+                                    <select name="enemy_type" title="Tipo do inimigo" required>
+                                        {% for key, label in enemy_types.items() %}
+                                            <option value="{{ key }}"{{ ' selected' if key == 'criatura' }}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <input type="text" name="name" placeholder="Nome do monstro/criatura" maxlength="100" required>
+                                </div>
+                                <textarea name="description" class="combat-desc-input" placeholder="Descrição (opcional)" maxlength="2000" rows="2"></textarea>
+                                <div class="combat-form-row">
+                                    <input type="file" name="avatar" accept="image/*" class="perspective-upload">
+                                    <span class="npc-color-swatch npc-color-swatch-lg"><input type="color" name="color" value="#c62f27" title="Cor da criatura"></span>
+                                </div>
+                                <div class="combat-form-row combat-form-row-end">
+                                    <label class="combat-bonus-field">
+                                        <input type="text" name="initiative_dice" placeholder="Iniciativa" maxlength="20" autocomplete="off" pattern="\s*(\d*[dD]\d+\s*([+\-]\s*\d+)?|[+\-]?\d+)\s*" class="combat-bonus-input" title="Dados da iniciativa da ameaça, ex.: 6d20+35 (rola os dados, usa o melhor e soma o valor fixo)">
+                                    </label>
+                                    <label class="combat-bonus-field combat-vd-field">
+                                        <input type="number" name="challenge" placeholder="VD" min="0" max="99999" step="1" class="combat-bonus-input" title="VD (Valor de Desafio) da ameaça">
+                                    </label>
+                                    <button type="submit">Adicionar</button>
+                                </div>
+                                <label class="lock-checkbox combat-hide-initiative" title="Os jogadores não veem o valor da iniciativa deste inimigo (você pode revelar depois)">
+                                    <input type="checkbox" name="hide_initiative"> Ocultar iniciativa dos jogadores
+                                </label>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="combat-actions-bar">
+                    <div class="combat-turn-controls" id="combat-turn-controls">
+                        <button type="button" class="btn-sm" id="turn-start-btn" onclick="turnAction('start')">Iniciar Turnos</button>
+                        <button type="button" class="btn-sm" id="turn-prev-btn" onclick="turnAction('prev')" style="display:none;">◀ Turno Anterior</button>
+                        <button type="button" class="btn-sm btn-increase" id="turn-next-btn" onclick="turnAction('next')" style="display:none;">Próximo Turno ▶</button>
+                        <button type="button" class="btn-sm btn-delete" id="turn-stop-btn" onclick="turnAction('stop')" style="display:none;">Parar Turnos</button>
+                    </div>
+
+                    <div class="combat-toolbar-row">
+                        <button type="button" class="skill-roll-btn combat-roll-all-btn" id="combat-roll-all-btn" onclick="rollAllPending()" disabled>
+                            <svg class="d20-icon" viewBox="-16 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M106.75 215.06L1.2 370.95c-3.08 5 .1 11.5 5.93 12.14l208.26 22.07-108.64-190.1zM7.41 315.43L82.7 193.08 6.06 147.1c-2.67-1.6-6.06.32-6.06 3.43v162.81c0 4.03 5.29 5.53 7.41 2.09zM18.25 423.6l194.4 87.66c5.3 2.45 11.35-1.43 11.35-7.26v-65.67l-203.55-22.3c-4.45-.5-6.23 5.59-2.2 7.57zm81.22-257.78L179.4 22.88c4.34-7.06-3.59-15.25-10.78-11.14L17.81 110.35c-2.47 1.62-2.39 5.26.13 6.78l81.53 48.69zM240 176h109.21L253.63 7.62C250.5 2.54 245.25 0 240 0s-10.5 2.54-13.63 7.62L130.79 176H240zm233.94-28.9l-76.64 45.99 75.29 122.35c2.11 3.44 7.41 1.94 7.41-2.1V150.53c0-3.11-3.39-5.03-6.06-3.43zm-93.41 18.72l81.53-48.7c2.53-1.52 2.6-5.16.13-6.78l-150.81-98.6c-7.19-4.11-15.12 4.08-10.78 11.14l79.93 142.94zm79.02 250.21L256 438.32v65.67c0 5.84 6.05 9.71 11.35 7.26l194.4-87.66c4.03-1.97 2.25-8.06-2.2-7.56zm-86.3-200.97l-108.63 190.1 208.26-22.07c5.83-.65 9.01-7.14 5.93-12.14L373.25 215.06zM240 208H139.57L240 383.75 340.43 208H240z"/></svg>
+                            Rolar Iniciativas Pendentes
+                        </button>
+
+                        <form method="POST" action="{{ url_for('combate_end') }}" class="combat-end-form"
+                            onsubmit="return confirmDelete(this, 'Encerrar o combate? Isso remove todos os participantes e apaga as iniciativas roladas.');">
+                            <button type="submit" class="btn-sm btn-delete">Encerrar Combate</button>
+                        </form>
+                    </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="combat-turn-banner" id="combat-turn-banner" style="display:none;"></div>
+
+            <div class="section-title">Participantes do Combate</div>
+
+            <div class="agent-grid combat-grid" id="combat-grid">
+                <p class="empty">Carregando combate...</p>
+            </div>
+
+            {% if not session.get('is_admin') %}
+                <button type="button" class="section-title combat-inventory-title combat-inventory-toggle" id="combat-inventory-toggle" onclick="toggleCombatInventory()" aria-expanded="true" aria-controls="combat-inventory-grid">
+                    <span>Meu Inventário</span>
+                    <svg class="combat-inventory-chevron" id="combat-inventory-chevron" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="inventory-grid combat-inventory-grid" id="combat-inventory-grid">
+                    <p class="empty">Carregando inventário...</p>
+                </div>
+
+                <button type="button" class="section-title combat-inventory-title combat-inventory-toggle" id="combat-rituals-toggle" onclick="toggleCombatRituals()" aria-expanded="true" aria-controls="combat-rituals-grid">
+                    <span>Meus Rituais</span>
+                    <svg class="combat-inventory-chevron" id="combat-rituals-chevron" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="ritual-list combat-inventory-grid" id="combat-rituals-grid">
+                    <p class="empty">Carregando rituais...</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mural-lightbox" id="agent-lightbox" onclick="closeAgentLightbox(event)">
+            <button type="button" class="mural-lightbox-close" onclick="closeAgentLightbox(event)" aria-label="Fechar"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>x</title><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7L17 17M17 7L7 17"/></svg></button>
+            <div class="mural-lightbox-tilt" id="agent-lightbox-tilt">
+                <img class="mural-lightbox-img" id="agent-lightbox-img" src="" alt="Foto de perfil expandida">
+                <div class="mural-tilt-spotlight-wrap" id="agent-tilt-spotlight-wrap">
+                    <div class="mural-tilt-spotlight" id="agent-tilt-spotlight"></div>
+                </div>
+            </div>
+            <div class="mural-lightbox-caption" id="agent-lightbox-caption"></div>
+        </div>
+
+        {% if not session.get('is_admin') %}
+            <div class="big-alert-overlay" id="combat-attack-panel-overlay">
+                <div class="attack-panel-box">
+                    <button type="button" class="big-alert-close" onclick="closeAttackPanel()" aria-label="Fechar"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>x</title><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7L17 17M17 7L7 17"/></svg></button>
+                    <div class="attack-panel-title">Rolar Ataque — escolha a perícia</div>
+                    <div class="attack-panel-choices">
+                        <button type="button" class="btn-sm" onclick="confirmAttackRoll('luta')">Luta</button>
+                        <button type="button" class="btn-sm" onclick="confirmAttackRoll('pontaria')">Pontaria</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="roll-popup-overlay" id="combat-roll-popup-overlay" onclick="if (event.target === this) closeRollPopup();">
+                <div class="roll-popup" role="dialog" aria-modal="true" aria-labelledby="combat-roll-popup-label">
+                    <button type="button" class="roll-popup-close" onclick="closeRollPopup()" aria-label="Fechar"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>x</title><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7L17 17M17 7L7 17"/></svg></button>
+                    <div class="roll-popup-label" id="combat-roll-popup-label"></div>
+                    <div class="roll-popup-total" id="combat-roll-popup-total"></div>
+                    <div class="roll-popup-detail" id="combat-roll-popup-detail"></div>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if session.get('is_admin') %}
+            <div class="big-alert-overlay" id="criatura-edit-overlay">
+                <div class="attack-panel-box combat-edit-panel-box">
+                    <button type="button" class="big-alert-close" onclick="closeCriaturaEditPanel()" aria-label="Fechar"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>x</title><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7L17 17M17 7L7 17"/></svg></button>
+                    <div class="attack-panel-title">Editar Criatura</div>
+                    <form id="criatura-edit-form" class="npc-add-form" method="POST" enctype="multipart/form-data">
+                        <select name="enemy_type" id="criatura-edit-type" title="Tipo do inimigo" required>
+                            {% for key, label in enemy_types.items() %}
+                                <option value="{{ key }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="name" id="criatura-edit-name" placeholder="Nome do monstro/criatura" maxlength="100" required>
+                        <textarea name="description" id="criatura-edit-description" class="combat-desc-input" placeholder="Descrição (opcional)" maxlength="2000" rows="4"></textarea>
+                        <div class="combat-form-row">
+                            <input type="file" name="avatar" accept="image/*" class="perspective-upload">
+                            <span class="npc-color-swatch npc-color-swatch-lg"><input type="color" name="color" id="criatura-edit-color" value="#c62f27" title="Cor da criatura"></span>
+                        </div>
+                        <div class="combat-form-row combat-form-row-end">
+                            <label class="combat-bonus-field">
+                                <input type="text" name="initiative_dice" id="criatura-edit-bonus" placeholder="Iniciativa" maxlength="20" autocomplete="off" pattern="\s*(\d*[dD]\d+\s*([+\-]\s*\d+)?|[+\-]?\d+)\s*" class="combat-bonus-input" title="Dados da iniciativa da ameaça, ex.: 6d20+35 (rola os dados, usa o melhor e soma o valor fixo)">
+                            </label>
+                            <label class="combat-bonus-field combat-vd-field">
+                                <input type="number" name="challenge" id="criatura-edit-vd" placeholder="VD" min="0" max="99999" step="1" class="combat-bonus-input" title="VD (Valor de Desafio) da ameaça">
+                            </label>
+                            <button type="submit">Salvar</button>
+                        </div>
+                        <label class="lock-checkbox combat-hide-initiative" title="Os jogadores não veem o valor da iniciativa deste inimigo">
+                            <input type="checkbox" name="hide_initiative" id="criatura-edit-hide-initiative"> Ocultar iniciativa dos jogadores
+                        </label>
+                        <div class="error" id="criatura-edit-error" style="display:none;"></div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="big-alert-overlay" id="agent-rituals-overlay">
+                <div class="attack-panel-box combat-edit-panel-box combat-rituals-panel-box">
+                    <button type="button" class="big-alert-close" onclick="closeAgentRituals()" aria-label="Fechar"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>x</title><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7L17 17M17 7L7 17"/></svg></button>
+                    <div class="attack-panel-title" id="agent-rituals-title">Rituais</div>
+                    <div class="combat-rituals-list" id="agent-rituals-list"></div>
+                </div>
+            </div>
+
+            <div class="big-alert-overlay" id="agent-inventory-overlay">
+                <div class="attack-panel-box combat-edit-panel-box combat-rituals-panel-box">
+                    <button type="button" class="big-alert-close" onclick="closeAgentInventory()" aria-label="Fechar"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>x</title><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7L17 17M17 7L7 17"/></svg></button>
+                    <div class="attack-panel-title" id="agent-inventory-title">Inventário</div>
+                    <div class="combat-rituals-list" id="agent-inventory-list"></div>
+                </div>
+            </div>
+
+            <div class="big-alert-overlay" id="ritual-edit-overlay">
+                <div class="attack-panel-box ritual-edit-panel-box">
+                    <button type="button" class="big-alert-close" onclick="closeRitualEditPanel()" aria-label="Fechar"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>x</title><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7L17 17M17 7L7 17"/></svg></button>
+                    <div class="attack-panel-title">Editar Ritual</div>
+                    <form id="ritual-edit-form" class="add-ritual-form" method="POST" enctype="multipart/form-data">
+                        <div class="field-grid">
+                            <div>
+                                <label>Nome do Ritual</label>
+                                <input type="text" name="name" id="ritual-edit-name" placeholder="Nome do ritual" required>
+                            </div>
+                            <div>
+                                <label>Elemento</label>
+                                <select name="element" id="ritual-edit-element" required>
+                                    <option value="" disabled>Selecione o elemento...</option>
+                                    {% for el in ritual_elements %}
+                                        <option value="{{ el }}">{{ el }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label>Círculo</label>
+                                <select name="circle" id="ritual-edit-circle" required>
+                                    <option value="" disabled>Selecione o círculo...</option>
+                                    {% for c, pe in ritual_circle_costs.items() %}
+                                        <option value="{{ c }}">{{ c }}º Círculo</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label>Custo {{ pe_t }} (Versão Discente)</label>
+                                <input type="number" name="pe_cost_discente" id="ritual-edit-pe-discente" min="0" step="1" required>
+                            </div>
+                            <div>
+                                <label>Custo {{ pe_t }} (Versão Verdadeira)</label>
+                                <input type="number" name="pe_cost_verdadeira" id="ritual-edit-pe-verdadeira" min="0" step="1" required>
+                            </div>
+                            <div>
+                                <label>Execução</label>
+                                <input type="text" name="execution" id="ritual-edit-execution" placeholder="Ação Padrão">
+                            </div>
+                            <div>
+                                <label>Alcance</label>
+                                <input type="text" name="range" id="ritual-edit-range" placeholder="Pessoal, 9m...">
+                            </div>
+                            <div>
+                                <label>Alvo / Área</label>
+                                <input type="text" name="target" id="ritual-edit-target" placeholder="Um alvo">
+                            </div>
+                            <div>
+                                <label>Duração</label>
+                                <input type="text" name="duration" id="ritual-edit-duration" placeholder="Instantânea, 1 cena...">
+                            </div>
+                            <div>
+                                <label class="label-nowrap">Resistência (opcional)</label>
+                                <input type="text" name="resistance" id="ritual-edit-resistance" placeholder="Fortitude, Vontade...">
+                            </div>
+                        </div>
+                        <div class="inv-field">
+                            <label>Resumo do Efeito</label>
+                            <textarea name="effect_summary" id="ritual-edit-effect-summary" placeholder="Descreva o que o ritual faz"></textarea>
+                        </div>
+                        <div class="inv-field">
+                            <label>Descrição Discente</label>
+                            <textarea name="description_discente" id="ritual-edit-description-discente" placeholder="Descreva o efeito da versão discente"></textarea>
+                        </div>
+                        <div class="inv-field">
+                            <label>Descrição Verdadeira</label>
+                            <textarea name="description_verdadeira" id="ritual-edit-description-verdadeira" placeholder="Descreva o efeito da versão verdadeira"></textarea>
+                        </div>
+                        <div class="inv-field">
+                            <label>Símbolo do Ritual (opcional — deixe em branco para manter o atual)</label>
+                            <input type="file" name="symbol" accept="image/*" class="perspective-upload">
+                        </div>
+                        <div class="error" id="ritual-edit-error" style="display:none;"></div>
+                        <button type="submit">Salvar Ritual</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+
+        <script>
+        const isAdminView = {{ 'true' if session.get('is_admin') else 'false' }};
+        const RITUAL_ELEMENT_ICON_MARKUP = {{ ritual_element_icons | tojson }};
+        const D20_ICON = '<svg class="d20-icon" viewBox="-16 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M106.75 215.06L1.2 370.95c-3.08 5 .1 11.5 5.93 12.14l208.26 22.07-108.64-190.1zM7.41 315.43L82.7 193.08 6.06 147.1c-2.67-1.6-6.06.32-6.06 3.43v162.81c0 4.03 5.29 5.53 7.41 2.09zM18.25 423.6l194.4 87.66c5.3 2.45 11.35-1.43 11.35-7.26v-65.67l-203.55-22.3c-4.45-.5-6.23 5.59-2.2 7.57zm81.22-257.78L179.4 22.88c4.34-7.06-3.59-15.25-10.78-11.14L17.81 110.35c-2.47 1.62-2.39 5.26.13 6.78l81.53 48.69zM240 176h109.21L253.63 7.62C250.5 2.54 245.25 0 240 0s-10.5 2.54-13.63 7.62L130.79 176H240zm233.94-28.9l-76.64 45.99 75.29 122.35c2.11 3.44 7.41 1.94 7.41-2.1V150.53c0-3.11-3.39-5.03-6.06-3.43zm-93.41 18.72l81.53-48.7c2.53-1.52 2.6-5.16.13-6.78l-150.81-98.6c-7.19-4.11-15.12 4.08-10.78 11.14l79.93 142.94zm79.02 250.21L256 438.32v65.67c0 5.84 6.05 9.71 11.35 7.26l194.4-87.66c4.03-1.97 2.25-8.06-2.2-7.56zm-86.3-200.97l-108.63 190.1 208.26-22.07c5.83-.65 9.01-7.14 5.93-12.14L373.25 215.06zM240 208H139.57L240 383.75 340.43 208H240z"/></svg>';
+        const TRASH_ICON = '<svg class="icon-trash" viewBox="-3 -2 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2h5a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h5V1a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1zm3.8 6l-.613 9.2a3 3 0 0 1-2.993 2.8H5.826a3 3 0 0 1-2.993-2.796L2.205 8H15.8zM7 9a1 1 0 0 0-1 1v7a1 1 0 0 0 2 0v-7a1 1 0 0 0-1-1zm4 0a1 1 0 0 0-1 1v7a1 1 0 0 0 2 0v-7a1 1 0 0 0-1-1z"/></svg>';
+        const EDIT_ICON = '<svg viewBox="0 0 528.899 528.899" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M328.883,89.125l107.59,107.589l-272.34,272.34L56.604,361.465L328.883,89.125z M518.113,63.177l-47.981-47.981 c-18.543-18.543-48.653-18.543-67.259,0l-45.961,45.961l107.59,107.59l53.611-53.611 C532.495,100.753,532.495,77.559,518.113,63.177z M0.3,512.69c-1.958,8.812,5.998,16.708,14.811,14.565l119.891-29.069 L27.473,390.597L0.3,512.69z"/></svg>';
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str == null ? '' : String(str);
+            return div.innerHTML;
+        }
+
+        // ---- Inventário do jogador na aba Combate (somente leitura, exceto
+        // pelas ações de uso/rolagem de armas e consumíveis, liberadas apenas
+        // no turno do próprio jogador) ----
+        let myCombatItems = [];
+        let myCombatRituals = [];
+        const combatRitualVersion = {};
+        let isMyCombatTurn = false;
+        const combatRollFeedback = {};
+
+        // Redesenha uma grade só quando o HTML realmente mudou e, quando
+        // precisa redesenhar, mantém a rolagem interna das descrições (itens
+        // e rituais). Sem isso, o poll a cada poucos segundos recriava os
+        // cards e a descrição voltava para o topo enquanto o jogador lia.
+        function setGridHtmlKeepScroll(grid, html) {
+            if (!grid || grid.dataset.lastHtml === html) return;
+            const scrollKey = (el) => {
+                const card = el.closest('[data-item-id], [data-ritual-id]');
+                const id = card ? (card.dataset.itemId || card.dataset.ritualId || '') : '';
+                return `${id}|${el.className}|${el.dataset.version || ''}`;
+            };
+            const saved = {};
+            grid.querySelectorAll('.item-desc-view, .ritual-effect').forEach(el => {
+                if (el.scrollTop > 0) saved[scrollKey(el)] = el.scrollTop;
+            });
+            grid.innerHTML = html;
+            grid.dataset.lastHtml = html;
+            if (Object.keys(saved).length) {
+                grid.querySelectorAll('.item-desc-view, .ritual-effect').forEach(el => {
+                    const top = saved[scrollKey(el)];
+                    if (top) el.scrollTop = top;
+                });
+            }
+        }
+
+        function setCombatRollFeedback(itemId, text, cls) {
+            combatRollFeedback[itemId] = { text, cls: cls || '' };
+            // O texto do feedback é alterado direto no DOM abaixo; invalida o
+            // cache para a próxima renderização refletir o estado real.
+            const invGrid = document.getElementById('combat-inventory-grid');
+            if (invGrid) invGrid.dataset.lastHtml = '';
+            const span = document.querySelector(`#combat-inventory-grid .item-actions[data-item-id="${itemId}"] .item-roll-feedback`);
+            if (span) {
+                span.textContent = text;
+                span.className = `item-roll-feedback${cls ? ' ' + cls : ''}`;
+            }
+            clearTimeout(combatRollFeedback[itemId].timer);
+            combatRollFeedback[itemId].timer = setTimeout(() => {
+                delete combatRollFeedback[itemId];
+                renderMyCombatInventory();
+            }, 15000);
+        }
+
+        function combatItemCardHtml(i) {
+            const isWeapon = i.item_type === 'Arma' && i.damage;
+            const isConsumable = i.item_type === 'Consumível';
+            const actionable = isWeapon || isConsumable;
+            const lockedAttrs = isMyCombatTurn ? '' : 'disabled title="Só é possível usar durante o seu turno de combate"';
+            const feedback = combatRollFeedback[i.id];
+
+            const avatarHtml = i.image
+                ? `<img class="item-img" src="/static/item_images/${i.image}" alt="${escapeHtml(i.name)}" onerror="return imgFallback(this, 'item')">`
+                : `<div class="item-img-placeholder">?</div>`;
+
+            return `<div class="item-card combat-inv-card" data-item-id="${i.id}">
+                ${avatarHtml}
+                <div class="item-name">${escapeHtml(i.name)}</div>
+                <div class="item-tags">
+                    <span class="item-tag">Cat. ${escapeHtml(i.level || '0')}</span>
+                    ${i.item_type ? `<span class="item-tag">${escapeHtml(i.item_type)}</span>` : ''}
+                    ${i.item_type === 'Paranormal' && i.element ? `<span class="item-tag item-tag-elem elem-${escapeHtml(i.element.toLowerCase())}"><svg class="ritual-element-icon" viewBox="0 0 800 800" aria-hidden="true">${RITUAL_ELEMENT_ICON_MARKUP[i.element.toLowerCase()] || ''}</svg>${escapeHtml(i.element)}</span>` : ''}
+                </div>
+                <div class="item-meta">x${i.quantity} · Peso ${i.spaces}/un.</div>
+                ${isWeapon && (i.damage || i.critical) ? `
+                <div class="item-weapon-stats">
+                    ${i.damage ? `<span><strong>Dano</strong> ${escapeHtml(i.damage)}</span>` : ''}
+                    ${i.critical ? `<span><strong>Crítico</strong> ${escapeHtml(i.critical)}</span>` : ''}
+                </div>` : ''}
+                ${i.item_type === 'Proteção' && i.defense ? `
+                <div class="item-weapon-stats"><span><strong>Defesa</strong> +${i.defense}</span></div>` : ''}
+                ${i.item_type === 'Acessórios de Carga' && i.carga_bonus ? `
+                <div class="item-weapon-stats"><span><strong>Carga</strong> +${i.carga_bonus}</span></div>` : ''}
+                ${i.description ? `<div class="item-desc-view">${escapeHtml(i.description)}</div>` : ''}
+                ${actionable ? `
+                <div class="item-actions" data-item-id="${i.id}">
+                    ${isWeapon ? `
+                    <button type="button" class="btn-sm item-roll-btn" ${lockedAttrs} onclick="openAttackPanel(${i.id})">${D20_ICON}<span class="item-roll-label">Rolar Ataque</span></button>
+                    <button type="button" class="btn-sm item-roll-btn" ${lockedAttrs} onclick="rollCombatItemDamage(${i.id}, this)">${D20_ICON}<span class="item-roll-label">Rolar Dano</span></button>` : ''}
+                    ${isConsumable ? `
+                    <button type="button" class="btn-sm item-roll-btn" ${lockedAttrs} onclick="consumeCombatItem(${i.id}, this)">Consumir</button>` : ''}
+                    <span class="item-roll-feedback${feedback && feedback.cls ? ' ' + feedback.cls : ''}">${feedback ? escapeHtml(feedback.text) : ''}</span>
+                </div>
+                ${!isMyCombatTurn ? '<div class="combat-inv-turn-hint">Disponível apenas no seu turno</div>' : ''}` : ''}
+            </div>`;
+        }
+
+        function toggleCombatInventory(forceCollapsed) {
+            const grid = document.getElementById('combat-inventory-grid');
+            const btn = document.getElementById('combat-inventory-toggle');
+            if (!grid || !btn) return;
+            const collapsed = typeof forceCollapsed === 'boolean'
+                ? forceCollapsed
+                : !grid.classList.contains('is-collapsed');
+            grid.classList.toggle('is-collapsed', collapsed);
+            btn.setAttribute('aria-expanded', String(!collapsed));
+            try {
+                localStorage.setItem('combatInventoryCollapsed', collapsed ? '1' : '0');
+            } catch (e) {}
+        }
+
+        // ---- Rituais do jogador na aba Combate (somente leitura; a única
+        // ação permitida é trocar a versão exibida — normal/discente/
+        // verdadeira — igual ao seletor do Painel) ----
+        function combatRitualCardHtml(r) {
+            const element = (r.element || '').toLowerCase();
+            const version = combatRitualVersion[r.id] || 'normal';
+            const symbolHtml = r.symbol
+                ? `<img class="ritual-symbol-mini" src="/static/ritual_symbols/${r.symbol}" alt="Símbolo de ${escapeHtml(r.name)}">`
+                : '';
+            const effects = [
+                r.effect_summary ? `<div class="ritual-effect" data-ritual-id="${r.id}" data-version="normal" style="${version === 'normal' ? '' : 'display:none;'}">${escapeHtml(r.effect_summary)}</div>` : '',
+                r.description_discente ? `<div class="ritual-effect" data-ritual-id="${r.id}" data-version="discente" style="${version === 'discente' ? '' : 'display:none;'}">${escapeHtml(r.description_discente)}</div>` : '',
+                r.description_verdadeira ? `<div class="ritual-effect" data-ritual-id="${r.id}" data-version="verdadeira" style="${version === 'verdadeira' ? '' : 'display:none;'}">${escapeHtml(r.description_verdadeira)}</div>` : '',
+            ].join('');
+            const peKey = 'pe_cost_' + version;
+            const peCost = r[peKey] || 0;
+
+            return `<div class="ritual-card elem-${element}" data-ritual-id="${r.id}">
+                <div class="ritual-card-header">
+                    ${symbolHtml}
+                    <span class="ritual-name">${escapeHtml(r.name)}</span>
+                    <span class="ritual-element elem-${element}">${escapeHtml(r.element)}<svg class="ritual-element-icon" viewBox="0 0 800 800" aria-hidden="true">${RITUAL_ELEMENT_ICON_MARKUP[element] || ''}</svg></span>
+                    <span class="ritual-pe"><span class="ritual-circle">${r.circle}º Círculo</span></span>
+                    <span class="ability-pe-cost ritual-pe-chip" data-ritual-id="${r.id}" data-pe-normal="${r.pe_cost_normal || 0}" data-pe-discente="${r.pe_cost_discente || 0}" data-pe-verdadeira="${r.pe_cost_verdadeira || 0}">${peCost} ${window.PE_T}</span>
+                    <div class="ritual-card-actions">
+                        <form class="ritual-use-form" data-ritual-id="${r.id}" onsubmit="return submitCombatUseRitual(event)">
+                            <button type="submit" class="btn-sm btn-increase">Usar Ritual</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="ritual-meta-grid">
+                    <div><span class="ritual-meta-label">Execução</span>${escapeHtml(r.execution) || '—'}</div>
+                    <div><span class="ritual-meta-label">Alcance</span>${escapeHtml(r.range_) || '—'}</div>
+                    <div><span class="ritual-meta-label">Alvo / Área</span>${escapeHtml(r.target) || '—'}</div>
+                    <div><span class="ritual-meta-label">Duração</span>${escapeHtml(r.duration) || '—'}</div>
+                    <div><span class="ritual-meta-label">Resistência</span>${escapeHtml(r.resistance) || 'Nenhuma'}</div>
+                    <div>
+                        <span class="ritual-meta-label">Versão</span>
+                        <select class="ritual-version-select" data-ritual-id="${r.id}" onchange="toggleRitualEffect(this)">
+                            <option value="normal"${version === 'normal' ? ' selected' : ''}>Normal</option>
+                            <option value="discente"${version === 'discente' ? ' selected' : ''}>Discente</option>
+                            <option value="verdadeira"${version === 'verdadeira' ? ' selected' : ''}>Verdadeira</option>
+                        </select>
+                    </div>
+                </div>
+                ${effects}
+            </div>`;
+        }
+
+        function toggleRitualEffect(select) {
+            const ritualId = select.dataset.ritualId;
+            const version = select.value;
+            combatRitualVersion[ritualId] = version;
+            document.querySelectorAll(`.ritual-effect[data-ritual-id="${ritualId}"]`).forEach(el => {
+                el.style.display = (el.dataset.version === version) ? '' : 'none';
+            });
+            const peChip = document.querySelector(`.ritual-pe-chip[data-ritual-id="${ritualId}"]`);
+            if (peChip) {
+                const key = 'pe' + version.charAt(0).toUpperCase() + version.slice(1);
+                const cost = peChip.dataset[key] || 0;
+                peChip.innerHTML = `${Number(cost) || 0} ${window.PE_T}`;
+            }
+        }
+
+        async function submitCombatUseRitual(evt) {
+            evt.preventDefault();
+            const form = evt.target;
+            const ritualId = form.dataset.ritualId;
+            const select = document.querySelector(`.ritual-version-select[data-ritual-id="${ritualId}"]`);
+            const version = select ? select.value : 'normal';
+            const button = form.querySelector('button');
+            button.disabled = true;
+
+            try {
+                const res = await fetch(`/player/use_ritual/${ritualId}?version=${encodeURIComponent(version)}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.ok) {
+                    const costMsg = data.pe_cost > 0 ? ` (-${data.pe_cost} ${window.peLabel()})` : '';
+                    if (typeof window.showAlert === 'function') {
+                        window.showAlert(`Ritual "${data.name}" usado!${costMsg}`, { icon: '✦', duration: 3000 });
+                    }
+                    refreshCombat(true);
+                } else if (typeof window.showAlert === 'function') {
+                    window.showAlert(data.error || 'Erro ao usar o ritual.');
+                }
+            } catch (e) {
+                if (typeof window.showAlert === 'function') window.showAlert('Erro de conexão.');
+            }
+            button.disabled = false;
+            return false;
+        }
+
+        function renderMyCombatRituals() {
+            const grid = document.getElementById('combat-rituals-grid');
+            if (!grid) return;
+            if (!myCombatRituals.length) {
+                setGridHtmlKeepScroll(grid, '<p class="empty">Nenhum ritual disponível ainda.</p>');
+                return;
+            }
+            setGridHtmlKeepScroll(grid, myCombatRituals.map(combatRitualCardHtml).join(''));
+        }
+
+        function toggleCombatRituals(forceCollapsed) {
+            const grid = document.getElementById('combat-rituals-grid');
+            const btn = document.getElementById('combat-rituals-toggle');
+            if (!grid || !btn) return;
+            const collapsed = typeof forceCollapsed === 'boolean'
+                ? forceCollapsed
+                : !grid.classList.contains('is-collapsed');
+            grid.classList.toggle('is-collapsed', collapsed);
+            btn.setAttribute('aria-expanded', String(!collapsed));
+            try {
+                localStorage.setItem('combatRitualsCollapsed', collapsed ? '1' : '0');
+            } catch (e) {}
+        }
+
+        function renderMyCombatInventory() {
+            const grid = document.getElementById('combat-inventory-grid');
+            if (!grid) return;
+            if (!myCombatItems.length) {
+                setGridHtmlKeepScroll(grid, '<p class="empty">Inventário vazio.</p>');
+                return;
+            }
+            setGridHtmlKeepScroll(grid, myCombatItems.map(combatItemCardHtml).join(''));
+        }
+
+        async function refreshMyCombatInventory() {
+            if (isAdminView) return;
+            try {
+                const res = await fetch('/player/api/status');
+                const data = await res.json();
+                myCombatItems = data.items || [];
+                myCombatRituals = data.rituals || [];
+                renderMyCombatInventory();
+                const ritualsGrid = document.getElementById('combat-rituals-grid');
+                if (!ritualsGrid || !ritualsGrid.contains(document.activeElement)) {
+                    renderMyCombatRituals();
+                }
+            } catch (e) {
+                console.error('Falha ao atualizar inventário do combate', e);
+            }
+        }
+
+        let combatAttackPanelItemId = null;
+
+        function openAttackPanel(itemId) {
+            if (!isMyCombatTurn) return;
+            combatAttackPanelItemId = itemId;
+            document.getElementById('combat-attack-panel-overlay').classList.add('is-visible');
+        }
+
+        function closeAttackPanel() {
+            document.getElementById('combat-attack-panel-overlay').classList.remove('is-visible');
+            combatAttackPanelItemId = null;
+        }
+
+        function showCombatRollPopup(label, detail, total, isCritical) {
+            const overlay = document.getElementById('combat-roll-popup-overlay');
+            if (!overlay) return;
+            document.getElementById('combat-roll-popup-label').textContent = label;
+            document.getElementById('combat-roll-popup-total').textContent = total;
+            document.getElementById('combat-roll-popup-detail').textContent = detail;
+            const box = overlay.querySelector('.roll-popup');
+            if (box) box.classList.toggle('is-critical', !!isCritical);
+            overlay.classList.add('is-visible');
+            if (typeof playDiceSound === 'function') playDiceSound();
+        }
+
+        function closeRollPopup() {
+            const overlay = document.getElementById('combat-roll-popup-overlay');
+            if (overlay) overlay.classList.remove('is-visible');
+        }
+
+        async function confirmAttackRoll(skillKey) {
+            const itemId = combatAttackPanelItemId;
+            closeAttackPanel();
+            if (itemId === null || !isMyCombatTurn) return;
+
+            try {
+                const res = await fetch('/pericias/api/roll', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ skill_key: skillKey })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    const skillLabel = skillKey === 'luta' ? 'Luta' : 'Pontaria';
+                    const rollsStr = data.rolls.join(', ');
+                    const item = myCombatItems.find(i => i.id === itemId);
+                    const itemName = item ? item.name : '';
+                    const detail = `${itemName ? itemName + ' · ' : ''}${data.dice_desc} [${rollsStr}] = ${data.chosen} + ${data.training} (${data.training_label})`;
+                    const label = `Ataque — ${skillLabel}${data.natural_20 ? ' — 20 NATURAL!' : ''}`;
+                    showCombatRollPopup(label, detail, data.total, data.natural_20);
+                } else {
+                    setCombatRollFeedback(itemId, data.error || 'Erro ao rolar', 'is-error');
+                }
+            } catch (e) {
+                setCombatRollFeedback(itemId, 'Erro de conexão', 'is-error');
+            }
+        }
+
+        async function rollCombatItemDamage(itemId, btn) {
+            if (!isMyCombatTurn) return;
+            if (btn) btn.disabled = true;
+            try {
+                const res = await fetch(`/player/api/roll_item_damage/${itemId}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.ok) {
+                    const item = myCombatItems.find(i => i.id === itemId);
+                    const itemName = item ? item.name : 'Dano';
+                    const detail = data.critical
+                        ? `${data.dice_detail} × ${data.multiplier} (crítico)`
+                        : data.dice_detail;
+                    let label = itemName;
+                    if (data.critical) label += data.natural_20 ? ' — CRÍTICO! 20 NATURAL!' : ' — CRÍTICO!';
+                    else if (data.natural_20) label += ' — 20 NATURAL!';
+                    showCombatRollPopup(label, detail, data.total, data.critical || data.natural_20);
+                } else {
+                    setCombatRollFeedback(itemId, data.error || 'Erro ao rolar', 'is-error');
+                }
+            } catch (e) {
+                setCombatRollFeedback(itemId, 'Erro de conexão', 'is-error');
+            }
+            if (btn) btn.disabled = false;
+        }
+
+        async function consumeCombatItem(itemId, btn) {
+            if (!isMyCombatTurn) return;
+            if (btn) btn.disabled = true;
+            try {
+                const res = await fetch(`/player/api/consume_item/${itemId}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.ok) {
+                    setCombatRollFeedback(itemId, data.deleted ? 'Consumido! (esgotado)' : `Consumido! Restam ${data.remaining}`, '');
+                    if (typeof showAlert === 'function') showAlert(`${data.name} consumido`, { icon: '✅' });
+                    refreshMyCombatInventory();
+                } else {
+                    setCombatRollFeedback(itemId, data.error || 'Erro ao consumir', 'is-error');
+                }
+            } catch (e) {
+                setCombatRollFeedback(itemId, 'Erro de conexão', 'is-error');
+            }
+            if (btn) btn.disabled = false;
+        }
+
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeRollPopup(); });
+
+        // Chamada à API que devolve sempre um erro com o motivo real: sessão
+        // expirada (redirecionou para o login), erro do servidor (500) ou
+        // falha de rede de verdade — em vez de tudo virar "erro de conexão".
+        async function apiRequest(url, options) {
+            let res;
+            try {
+                res = await fetch(url, options);
+            } catch (e) {
+                throw new Error('Sem conexão com o servidor. Verifique se o app está rodando.');
+            }
+            if (res.redirected && /\/login/.test(res.url)) {
+                throw new Error('Sua sessão expirou. Recarregue a página e entre de novo.');
+            }
+            const text = await res.text();
+            let data = null;
+            try { data = JSON.parse(text); } catch (e) { /* resposta não era JSON */ }
+            if (!res.ok || (data && data.ok === false)) {
+                throw new Error((data && data.error) || `O servidor respondeu com erro (${res.status}).`);
+            }
+            if (data === null) {
+                throw new Error('Resposta inesperada do servidor.');
+            }
+            return data;
+        }
+
+        function removeForm(id, name) {
+            if (!isAdminView) return '';
+            const msg = `Remover ${escapeHtml(name || 'este participante')} do combate?`;
+            return `<form class="combat-remove-form" method="POST" action="/admin/combate/remove/${id}"
+                onsubmit="return confirmDelete(this, ${JSON.stringify(msg)});">
+                <button type="submit" class="combat-remove-btn btn-delete" aria-label="Remover do combate" title="Remover do combate">${TRASH_ICON}</button>
+            </form>`;
+        }
+
+        function editCriaturaButton(p) {
+            if (!isAdminView) return '';
+            return `<button type="button" class="combat-edit-btn" onclick="openCriaturaEdit(${p.id})" aria-label="Editar criatura" title="Editar criatura">${EDIT_ICON}</button>`;
+        }
+
+        // Faixas de altura fixa que existem em TODO card de combate (mesmo
+        // vazias): subtítulo (título do agente / tipo da ameaça) e estado.
+        // Assim avatar, nome, subtítulo, estado e corpo ficam alinhados entre
+        // os cards, independente de quais informações cada um tem.
+        function cardSub(html) {
+            return `<div class="combat-card-sub">${html || ''}</div>`;
+        }
+
+        function cardState(html) {
+            return `<div class="combat-card-state">${html || ''}</div>`;
+        }
+
+        // Chip com o VD (Valor de Desafio) da ameaça; sem VD, a faixa fica vazia.
+        function vdChip(p) {
+            if (p.challenge === null || p.challenge === undefined) return '';
+            return `<div class="combat-vd-chip" title="VD (Valor de Desafio)">VD ${escapeHtml(String(p.challenge))}</div>`;
+        }
+
+        function enemyTypeBadge(p) {
+            const type = p.enemy_type || 'criatura';
+            return `<div class="combat-type-badge combat-type-${escapeHtml(type)}">${escapeHtml(p.enemy_type_label || 'Criatura')}</div>`;
+        }
+
+        function ritualsButton(p) {
+            if (!isAdminView || p.is_admin) return '';
+            const safeName = escapeHtml(p.name || '').replace(/"/g, '&quot;');
+            return `<button type="button" class="btn-sm combat-rituals-btn" data-name="${safeName}" onclick="openAgentRituals(${p.id}, this.dataset.name)">Rituais</button>`;
+        }
+
+        function inventoryButton(p) {
+            if (!isAdminView || p.is_admin) return '';
+            const safeName = escapeHtml(p.name || '').replace(/"/g, '&quot;');
+            return `<button type="button" class="btn-sm combat-rituals-btn" data-name="${safeName}" onclick="openAgentInventory(${p.id}, this.dataset.name)">Inventário</button>`;
+        }
+
+        // Botão do mestre para revelar/ocultar a iniciativa de um inimigo
+        // (criatura ou NPC) para os jogadores.
+        function initiativeVisibilityButton(p) {
+            if (!isAdminView || p.kind === 'agente') return '';
+            const hidden = !!p.initiative_hidden;
+            const label = hidden ? 'Oculta dos jogadores — clique para revelar' : 'Visível aos jogadores — clique para ocultar';
+            return `<button type="button" class="btn-sm combat-initiative-visibility${hidden ? ' is-hidden' : ''}" onclick="toggleInitiativeVisibility(${p.id}, ${hidden ? 'false' : 'true'}, this)" title="${label}">${hidden ? '🙈 Oculta' : '👁 Visível'}</button>`;
+        }
+
+        function initiativeBox(p) {
+            const visBtn = initiativeVisibilityButton(p);
+            if (p.initiative !== null && p.initiative !== undefined) {
+                return `<div class="combat-initiative-box combat-initiative-rolled">
+                    <span class="combat-initiative-label">Iniciativa</span>
+                    <span class="combat-initiative-value">${p.initiative}</span>
+                    ${visBtn}
+                </div>`;
+            }
+            // Jogador: o inimigo já rolou, mas o mestre escondeu o valor.
+            if (p.initiative_concealed) {
+                return `<div class="combat-initiative-box combat-initiative-rolled">
+                    <span class="combat-initiative-label">Iniciativa</span>
+                    <span class="combat-initiative-value combat-initiative-secret" title="O mestre ocultou esta iniciativa">?</span>
+                </div>`;
+            }
+            if (p.can_roll) {
+                return `<div class="combat-initiative-box">
+                    <button type="button" class="skill-roll-btn combat-roll-btn" onclick="rollInitiative(${p.id}, this)">${D20_ICON}Rolar Iniciativa</button>
+                    ${visBtn}
+                </div>`;
+            }
+            return `<div class="combat-initiative-box combat-initiative-pending">
+                <span class="combat-initiative-label">Iniciativa</span>
+                <span class="combat-initiative-value combat-initiative-waiting">—</span>
+            </div>`;
+        }
+
+        async function toggleInitiativeVisibility(id, hidden, btn) {
+            if (btn) btn.disabled = true;
+            try {
+                await apiRequest(`/admin/combate/initiative_visibility/${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hidden })
+                });
+                refreshCombat(true);
+            } catch (e) {
+                showAlert(e.message);
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function currentClass(p) {
+            return p.id === turnState.current_id ? ' combat-card-current' : '';
+        }
+
+        function currentTag(p) {
+            if (p.id !== turnState.current_id) return '';
+            let btn = '';
+            if (isAdminView || p.is_mine) {
+                btn = `<button type="button" class="btn-sm combat-end-turn-btn" onclick="endMyTurn(this)">Encerrar turno</button>`;
+            }
+            return `<div class="combat-current-tag">Turno atual</div>${btn}`;
+        }
+
+        // Linha de status (PV/PE/Sanidade) com botõezinhos de +/- só no
+        // próprio personagem do jogador (não no mestre nem em outros
+        // agentes) — permite ajustar o pool sem sair da aba de Combate.
+        function statRow(labelClass, label, field, value, max, p) {
+            const canEdit = p.is_mine && !isAdminView;
+            const shownLabel = field === 'pe' ? window.PE_T : label;
+            const plainLabel = field === 'pe' ? window.peLabel() : label;
+            const valueId = `combat-stat-${field}-${p.id}`;
+            const controls = canEdit ? `<span class="combat-stat-controls">
+                <button type="button" class="combat-stat-btn" onclick="adjustCombatPoint(${p.id}, '${field}', 'decrease', this)" aria-label="Diminuir ${plainLabel}" title="Diminuir ${plainLabel}">−</button>
+                <button type="button" class="combat-stat-btn" onclick="adjustCombatPoint(${p.id}, '${field}', 'increase', this)" aria-label="Aumentar ${plainLabel}" title="Aumentar ${plainLabel}">+</button>
+            </span>` : '';
+            return `<div class="agent-stat-row${field === 'sanidade' ? ' agent-stat-row-sanidade' : ''}">
+                <span class="agent-stat-label ${labelClass}">${shownLabel}</span>
+                <span class="agent-stat-value-wrap">
+                    <span class="agent-stat-value" id="${valueId}">${value} / ${max}</span>
+                    ${controls}
+                </span>
+            </div>`;
+        }
+
+        async function adjustCombatPoint(participantId, field, direction, btn) {
+            const group = btn.closest('.combat-stat-controls');
+            const buttons = group ? group.querySelectorAll('button') : [btn];
+            const valueEl = document.getElementById(`combat-stat-${field}-${participantId}`);
+
+            // Atualiza o número na hora (otimista), sem esperar o servidor
+            // responder — corrige com o valor real quando a resposta chega,
+            // ou desfaz se der erro. Isso tira a sensação de demora do clique.
+            let previousText = null;
+            if (valueEl) {
+                previousText = valueEl.textContent;
+                const parts = previousText.split('/').map(s => parseInt(s.trim(), 10));
+                if (!isNaN(parts[0]) && !isNaN(parts[1])) {
+                    const optimistic = direction === 'increase' ? parts[0] + 1 : Math.max(0, parts[0] - 1);
+                    valueEl.textContent = `${optimistic} / ${parts[1]}`;
+                }
+            }
+
+            buttons.forEach(b => b.disabled = true);
+            try {
+                const res = await fetch('/player/reduce_point', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ field: field, amount: 1, direction: direction })
+                });
+                let data = null;
+                try { data = await res.json(); } catch (_) { data = null; }
+                if (data && data.ok) {
+                    if (valueEl) valueEl.textContent = `${data.current} / ${data.max}`;
+                    lastCombatRaw = null; // força o próximo refresh a redesenhar com o valor confirmado
+                } else {
+                    if (valueEl && previousText !== null) valueEl.textContent = previousText;
+                    showAlert((data && data.error) || 'Erro ao ajustar o ponto.');
+                }
+            } catch (e) {
+                if (valueEl && previousText !== null) valueEl.textContent = previousText;
+                showAlert('Erro de conexão.');
+            }
+            buttons.forEach(b => b.disabled = false);
+        }
+
+        function renderAgenteCard(p) {
+            const avatarHtml = p.avatar
+                ? `<img class="agent-avatar agent-avatar-clickable" src="/static/avatar_images/${p.avatar}" alt="Imagem de ${escapeHtml(p.name)}" onerror="return imgFallback(this, 'agent-avatar')" data-lightbox-src="/static/avatar_images/${p.avatar}" data-lightbox-name="${escapeHtml(p.name)}">`
+                : `<div class="agent-avatar-placeholder">?</div>`;
+
+            let statsHtml = '';
+            if (!p.is_admin && p.pv !== undefined) {
+                statsHtml = `<div class="agent-stats">
+                    ${statRow('agent-stat-label-pv', 'PV', 'pv', p.pv, p.pv_max, p)}
+                    ${statRow('agent-stat-label-pe', 'PE', 'pe', p.pe, p.pe_max, p)}
+                    ${statRow('agent-stat-label-sanidade', 'Sanidade', 'sanidade', p.sanidade, p.sanidade_max, p)}
+                    <div class="agent-stat-row"><span class="agent-stat-label agent-stat-label-defesa">Defesa</span><span class="agent-stat-value">${p.defesa}</span></div>
+                </div>`;
+            }
+
+            return `<div class="agent-card combat-card${currentClass(p)}" style="--agent-color: ${p.color || '#c62f27'};">
+                ${removeForm(p.id, p.name)}
+                <div class="agent-status-dot ${p.is_online ? 'online' : 'offline'}" title="${p.is_online ? 'Online' : 'Offline'}"></div>
+                ${avatarHtml}
+                <div class="agent-name">${escapeHtml(p.name)}${p.is_admin ? '<span class="badge">ADMIN</span>' : ''}</div>
+                ${cardSub(!p.is_admin && p.character_title ? `<div class="agent-title" title="${escapeHtml(p.character_title)}" style="color: ${p.character_title_color || '#f5f5f5'};">"${escapeHtml(p.character_title)}"</div>` : '')}
+                ${cardState(p.is_admin ? '' : stateBadge(p, true))}
+                ${statsHtml}
+                <div class="combat-agent-actions">
+                    ${ritualsButton(p)}
+                    ${inventoryButton(p)}
+                </div>
+                ${currentTag(p)}
+                <div class="combat-spacer"></div>
+                ${initiativeBox(p)}
+            </div>`;
+        }
+
+        function renderCriaturaCard(p) {
+            const avatarHtml = p.avatar
+                ? `<img class="agent-avatar agent-avatar-clickable" src="/static/combat_images/${p.avatar}" alt="Imagem de ${escapeHtml(p.name)}" onerror="return imgFallback(this, 'agent-avatar')" data-lightbox-src="/static/combat_images/${p.avatar}" data-lightbox-name="${escapeHtml(p.name)}">`
+                : `<div class="agent-avatar-placeholder">?</div>`;
+
+            return `<div class="agent-card npc-card combat-card${currentClass(p)}" data-participant-id="${p.id}" style="--agent-color: ${p.color || '#c62f27'};">
+                ${removeForm(p.id, p.name)}
+                ${editCriaturaButton(p)}
+                ${avatarHtml}
+                <div class="agent-name">${escapeHtml(p.name)}</div>
+                ${cardSub(enemyTypeBadge(p))}
+                ${cardState(vdChip(p))}
+                ${p.description ? `<div class="npc-description">${escapeHtml(p.description)}</div>` : ''}
+                ${currentTag(p)}
+                <div class="combat-spacer"></div>
+                ${initiativeBox(p)}
+            </div>`;
+        }
+
+        function stateBadge(p, showEmpty = false) {
+            if (!p.state || !p.state_color) {
+                // Jogador sem estado: mostra o chip neutro "Sem estado".
+                return showEmpty
+                    ? '<div class="npc-state-badge" style="--state-color: #7a7a7a;">Sem estado</div>'
+                    : '';
+            }
+            const icon = p.state_icon ? `<span class="npc-state-icon">${p.state_icon}</span>` : '';
+            return `<div class="npc-state-badge${p.state === 'Morto' ? ' npc-state-badge-morto' : ''}" style="--state-color: ${escapeHtml(p.state_color)};">${icon}${escapeHtml(p.state)}</div>`;
+        }
+
+        function renderNpcCard(p) {
+            const avatarHtml = p.avatar
+                ? `<img class="agent-avatar agent-avatar-clickable" src="/static/npc_images/${p.avatar}" alt="Imagem de ${escapeHtml(p.name)}" onerror="return imgFallback(this, 'agent-avatar')" data-lightbox-src="/static/npc_images/${p.avatar}" data-lightbox-name="${escapeHtml(p.name)}">`
+                : `<div class="agent-avatar-placeholder">?</div>`;
+            const stateHtml = stateBadge(p);
+
+            return `<div class="agent-card npc-card combat-card${currentClass(p)}" data-participant-id="${p.id}" style="--agent-color: ${p.color || '#c62f27'};">
+                ${removeForm(p.id, p.name)}
+                ${avatarHtml}
+                <div class="agent-name">${escapeHtml(p.name)}</div>
+                ${cardSub('')}
+                ${cardState(stateHtml)}
+                ${p.description ? `<div class="npc-description">${escapeHtml(p.description)}</div>` : ''}
+                ${currentTag(p)}
+                <div class="combat-spacer"></div>
+                ${initiativeBox(p)}
+            </div>`;
+        }
+
+        function attachLightboxHandlers() {
+            document.querySelectorAll('#combat-grid .agent-avatar-clickable').forEach(el => {
+                el.addEventListener('click', () => {
+                    openAgentLightbox(el.dataset.lightboxSrc, el.dataset.lightboxName);
+                });
+            });
+        }
+
+        let lastCombatRaw = null;
+        let turnState = { active: false, round: 0, current_id: null };
+        let lastAnnouncedTurnId = undefined;
+
+        function updateTurnUi(participants) {
+            const banner = document.getElementById('combat-turn-banner');
+            const startBtn = document.getElementById('turn-start-btn');
+            const prevBtn = document.getElementById('turn-prev-btn');
+            const nextBtn = document.getElementById('turn-next-btn');
+            const stopBtn = document.getElementById('turn-stop-btn');
+
+            if (startBtn) {
+                startBtn.style.display = turnState.active ? 'none' : '';
+                startBtn.disabled = !participants.some(p => (p.initiative !== null && p.initiative !== undefined) || p.initiative_concealed);
+                if (prevBtn) prevBtn.style.display = turnState.active ? '' : 'none';
+                if (nextBtn) nextBtn.style.display = turnState.active ? '' : 'none';
+                if (stopBtn) stopBtn.style.display = turnState.active ? '' : 'none';
+            }
+
+            if (!banner) return;
+            if (!turnState.active) {
+                banner.style.display = 'none';
+                lastAnnouncedTurnId = null;
+                return;
+            }
+            const current = participants.find(p => p.id === turnState.current_id);
+            const waiting = participants.filter(p => (p.initiative === null || p.initiative === undefined) && !p.initiative_concealed).length;
+            const myTurnBtn = (current && current.is_mine && !isAdminView)
+                ? `<button type="button" class="btn-sm combat-end-turn-btn combat-banner-end-turn-btn" onclick="endMyTurn(this)">Encerrar meu turno</button>`
+                : '';
+            banner.innerHTML = `<span class="combat-turn-round">Rodada ${turnState.round}</span>
+                <span class="combat-turn-who">Vez de <strong>${escapeHtml(current ? current.name : '—')}</strong></span>
+                ${waiting ? `<span class="combat-turn-waiting">${waiting} sem iniciativa</span>` : ''}
+                ${myTurnBtn}`;
+            banner.style.display = '';
+
+            // Avisa o jogador quando chega a vez do personagem dele.
+            if (lastAnnouncedTurnId !== undefined && lastAnnouncedTurnId !== turnState.current_id
+                && current && current.is_mine && !isAdminView) {
+                showAlert('É a sua vez!', { icon: '⚔️' });
+            }
+            lastAnnouncedTurnId = turnState.current_id;
+        }
+
+        async function turnAction(action) {
+            try {
+                const data = await apiRequest(`/admin/combate/turn/${action}`, { method: 'POST' });
+                turnState = data.turn;
+                refreshCombat(true);
+            } catch (e) {
+                showAlert(e.message);
+            }
+        }
+
+        async function endMyTurn(btn) {
+            if (btn) btn.disabled = true;
+            try {
+                const data = await apiRequest('/combate/api/turn/end', { method: 'POST' });
+                turnState = data.turn;
+                refreshCombat(true);
+            } catch (e) {
+                showAlert(e.message);
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function refreshCombat(force) {
+            if (!force && window.isTypingInField && window.isTypingInField()) return;
+            try {
+                const res = await fetch('/combate/api/list');
+                const raw = await res.text();
+                if (!force && raw === lastCombatRaw) return;
+                lastCombatRaw = raw;
+                const data = JSON.parse(raw);
+                const participants = data.participants || [];
+                const grid = document.getElementById('combat-grid');
+                turnState = data.turn || { active: false, round: 0, current_id: null };
+                updateTurnUi(participants);
+
+                if (!isAdminView) {
+                    const mine = participants.find(p => p.is_mine);
+                    const nowMyTurn = !!(turnState.active && mine && mine.id === turnState.current_id);
+                    if (nowMyTurn !== isMyCombatTurn) {
+                        isMyCombatTurn = nowMyTurn;
+                        renderMyCombatInventory();
+                    }
+                }
+
+                const rollAllBtn = document.getElementById('combat-roll-all-btn');
+                if (rollAllBtn) {
+                    const pendingCount = participants.filter(p => (p.initiative === null || p.initiative === undefined) && !p.initiative_concealed).length;
+                    rollAllBtn.disabled = pendingCount === 0;
+                }
+
+                if (!participants.length) {
+                    grid.innerHTML = '<p class="empty">Nenhum combate acontecendo no momento.</p>';
+                    return;
+                }
+
+                // A descrição das criaturas rola por dentro do card; guarda a
+                // posição antes de redesenhar para não voltar ao topo sempre
+                // que qualquer valor do combate muda.
+                const descScroll = {};
+                grid.querySelectorAll('.combat-card[data-participant-id]').forEach(card => {
+                    const d = card.querySelector('.npc-description');
+                    if (d && d.scrollTop > 0) descScroll[card.dataset.participantId] = d.scrollTop;
+                });
+
+                grid.innerHTML = participants
+                    .map(p => p.kind === 'agente' ? renderAgenteCard(p) : (p.kind === 'npc' ? renderNpcCard(p) : renderCriaturaCard(p)))
+                    .join('');
+
+                grid.querySelectorAll('.combat-card[data-participant-id]').forEach(card => {
+                    const top = descScroll[card.dataset.participantId];
+                    const d = card.querySelector('.npc-description');
+                    if (top && d) d.scrollTop = top;
+                });
+                attachLightboxHandlers();
+            } catch (e) {
+                console.error('Falha ao atualizar combate', e);
+            }
+        }
+
+        async function rollInitiative(id, btn) {
+            btn.disabled = true;
+            try {
+                const res = await fetch(`/combate/api/roll/${id}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.ok) {
+                    showAlert(`Iniciativa: ${data.initiative}`, { icon: '🎲', total: data.initiative, autoClose: false });
+                    refreshCombat(true);
+                } else {
+                    showAlert(data.error || 'Erro ao rolar iniciativa');
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                showAlert('Erro de conexão');
+                btn.disabled = false;
+            }
+        }
+
+        async function rollAllPending() {
+            const btn = document.getElementById('combat-roll-all-btn');
+            if (btn) btn.disabled = true;
+            try {
+                const res = await fetch('/combate/api/roll_all', { method: 'POST' });
+                const data = await res.json();
+                if (data.ok) {
+                    refreshCombat(true);
+                } else {
+                    showAlert(data.error || 'Erro ao rolar iniciativas pendentes');
+                }
+            } catch (e) {
+                showAlert('Erro de conexão');
+            }
+        }
+
+        // Abre o painel de edição de uma criatura já preenchido com os
+        // dados atuais (busca sempre na API, igual ao editor de itens).
+        async function openCriaturaEdit(id) {
+            const overlay = document.getElementById('criatura-edit-overlay');
+            const errEl = document.getElementById('criatura-edit-error');
+            if (!overlay) return;
+            errEl.style.display = 'none';
+            errEl.textContent = '';
+            try {
+                const data = await apiRequest(`/admin/combate/api/criatura/${id}`);
+                const c = data.participant;
+                const form = document.getElementById('criatura-edit-form');
+                form.action = `/admin/combate/edit_criatura/${id}`;
+                document.getElementById('criatura-edit-type').value = c.enemy_type || 'criatura';
+                document.getElementById('criatura-edit-name').value = c.name || '';
+                document.getElementById('criatura-edit-description').value = c.description || '';
+                document.getElementById('criatura-edit-color').value = c.color || '#c62f27';
+                document.getElementById('criatura-edit-vd').value = (c.challenge === null || c.challenge === undefined) ? '' : c.challenge;
+                // Criaturas antigas só têm o bônus: mostra como 1d20+bônus.
+                const legacyBonus = Number(c.initiative_bonus) || 0;
+                document.getElementById('criatura-edit-bonus').value = c.initiative_dice
+                    || (legacyBonus ? `1d20${legacyBonus > 0 ? '+' : '-'}${Math.abs(legacyBonus)}` : '');
+                document.getElementById('criatura-edit-hide-initiative').checked = !!Number(c.initiative_hidden);
+                form.querySelector('input[name="avatar"]').value = '';
+                overlay.classList.add('is-visible');
+            } catch (e) {
+                showAlert(e.message);
+            }
+        }
+
+        function closeCriaturaEditPanel() {
+            const overlay = document.getElementById('criatura-edit-overlay');
+            if (overlay) overlay.classList.remove('is-visible');
+        }
+
+        (function setupCriaturaEditSubmit() {
+            const form = document.getElementById('criatura-edit-form');
+            if (!form) return;
+            form.addEventListener('submit', async (evt) => {
+                evt.preventDefault();
+                const errEl = document.getElementById('criatura-edit-error');
+                errEl.style.display = 'none';
+                errEl.textContent = '';
+                try {
+                    const res = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    closeCriaturaEditPanel();
+                    refreshCombat(true);
+                } catch (e) {
+                    errEl.textContent = 'Erro ao salvar a criatura (' + (e && e.message ? e.message : 'falha de rede') + '). Tente novamente.';
+                    errEl.style.display = 'block';
+                }
+            });
+        })();
+
+        // ---- Rituais dos agentes (só o mestre) ----
+        let currentRitualsParticipantId = null;
+        let currentRitualsParticipantName = '';
+
+        async function openAgentRituals(participantId, name) {
+            const overlay = document.getElementById('agent-rituals-overlay');
+            const list = document.getElementById('agent-rituals-list');
+            if (!overlay) return;
+            currentRitualsParticipantId = participantId;
+            currentRitualsParticipantName = name || '';
+            document.getElementById('agent-rituals-title').textContent = name ? `Rituais — ${name}` : 'Rituais';
+            list.innerHTML = '<p class="empty">Carregando rituais...</p>';
+            overlay.classList.add('is-visible');
+            await loadAgentRituals();
+        }
+
+        async function loadAgentRituals() {
+            const list = document.getElementById('agent-rituals-list');
+            try {
+                const data = await apiRequest(`/admin/combate/api/agente/${currentRitualsParticipantId}/rituais`);
+                if (!data.rituals.length) {
+                    list.innerHTML = '<p class="empty">Este agente ainda não tem rituais.</p>';
+                    return;
+                }
+                list.innerHTML = data.rituals.map(r => `
+                    <div class="combat-ritual-row">
+                        ${r.symbol
+                            ? `<img class="ritual-symbol-mini combat-inv-thumb" src="/static/ritual_symbols/${r.symbol}" alt="Símbolo de ${escapeHtml(r.name)}" onerror="return imgFallback(this, 'item')">`
+                            : `<div class="item-img-placeholder combat-inv-thumb">?</div>`}
+                        <div class="combat-ritual-info">
+                            <span class="combat-ritual-name">${escapeHtml(r.name)}</span>
+                            <span class="combat-ritual-meta">${escapeHtml(r.element)} · ${escapeHtml(r.circle)}º Círculo</span>
+                        </div>
+                        <button type="button" class="combat-edit-btn combat-ritual-edit-btn" onclick="openRitualEdit(${r.id})" aria-label="Editar ritual" title="Editar ritual">${EDIT_ICON}</button>
+                    </div>`).join('');
+            } catch (e) {
+                list.innerHTML = `<div class="error" style="display:block;">${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        function closeAgentRituals() {
+            const overlay = document.getElementById('agent-rituals-overlay');
+            if (overlay) overlay.classList.remove('is-visible');
+        }
+
+        // ---- Inventário dos agentes (só o mestre, somente leitura) ----
+        let currentInventoryParticipantId = null;
+
+        async function openAgentInventory(participantId, name) {
+            const overlay = document.getElementById('agent-inventory-overlay');
+            const list = document.getElementById('agent-inventory-list');
+            if (!overlay) return;
+            currentInventoryParticipantId = participantId;
+            document.getElementById('agent-inventory-title').textContent = name ? `Inventário — ${name}` : 'Inventário';
+            list.innerHTML = '<p class="empty">Carregando inventário...</p>';
+            overlay.classList.add('is-visible');
+            await loadAgentInventory();
+        }
+
+        async function loadAgentInventory() {
+            const list = document.getElementById('agent-inventory-list');
+            try {
+                const data = await apiRequest(`/admin/combate/api/agente/${currentInventoryParticipantId}/inventario`);
+                if (!data.items.length) {
+                    list.innerHTML = '<p class="empty">Este agente ainda não tem itens.</p>';
+                    return;
+                }
+                list.innerHTML = data.items.map(i => `
+                    <div class="combat-ritual-row">
+                        ${i.image
+                            ? `<img class="item-img combat-inv-thumb" src="/static/item_images/${i.image}" alt="${escapeHtml(i.name)}" onerror="return imgFallback(this, 'item')">`
+                            : `<div class="item-img-placeholder combat-inv-thumb">?</div>`}
+                        <div class="combat-ritual-info">
+                            <span class="combat-ritual-name">${escapeHtml(i.name)} ${i.quantity > 1 ? `(x${i.quantity})` : ''}</span>
+                            <span class="combat-ritual-meta">${escapeHtml(i.item_type || 'Item')} · Cat. ${escapeHtml(i.level || '0')} · Peso ${i.spaces}/un.</span>
+                        </div>
+                    </div>`).join('');
+            } catch (e) {
+                list.innerHTML = `<div class="error" style="display:block;">${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        function closeAgentInventory() {
+            const overlay = document.getElementById('agent-inventory-overlay');
+            if (overlay) overlay.classList.remove('is-visible');
+        }
+
+        async function openRitualEdit(ritualId) {
+            const overlay = document.getElementById('ritual-edit-overlay');
+            const errEl = document.getElementById('ritual-edit-error');
+            if (!overlay) return;
+            errEl.style.display = 'none';
+            errEl.textContent = '';
+            try {
+                const data = await apiRequest(`/admin/api/ritual/${ritualId}`);
+                const r = data.ritual;
+                const form = document.getElementById('ritual-edit-form');
+                form.dataset.ritualId = ritualId;
+                form.action = `/admin/edit_ritual/${ritualId}`;
+                document.getElementById('ritual-edit-name').value = r.name || '';
+                document.getElementById('ritual-edit-element').value = r.element || '';
+                document.getElementById('ritual-edit-circle').value = r.circle || '';
+                document.getElementById('ritual-edit-pe-discente').value = r.pe_cost_discente || 0;
+                document.getElementById('ritual-edit-pe-verdadeira').value = r.pe_cost_verdadeira || 0;
+                document.getElementById('ritual-edit-execution').value = r.execution || '';
+                document.getElementById('ritual-edit-range').value = r.range_ || '';
+                document.getElementById('ritual-edit-target').value = r.target || '';
+                document.getElementById('ritual-edit-duration').value = r.duration || '';
+                document.getElementById('ritual-edit-resistance').value = r.resistance || '';
+                document.getElementById('ritual-edit-effect-summary').value = r.effect_summary || '';
+                document.getElementById('ritual-edit-description-discente').value = r.description_discente || '';
+                document.getElementById('ritual-edit-description-verdadeira').value = r.description_verdadeira || '';
+                form.querySelector('input[name="symbol"]').value = '';
+                overlay.classList.add('is-visible');
+            } catch (e) {
+                showAlert(e.message);
+            }
+        }
+
+        function closeRitualEditPanel() {
+            const overlay = document.getElementById('ritual-edit-overlay');
+            if (overlay) overlay.classList.remove('is-visible');
+        }
+
+        (function setupRitualEditSubmit() {
+            const form = document.getElementById('ritual-edit-form');
+            if (!form) return;
+            form.addEventListener('submit', async (evt) => {
+                evt.preventDefault();
+                const errEl = document.getElementById('ritual-edit-error');
+                errEl.style.display = 'none';
+                errEl.textContent = '';
+                try {
+                    await apiRequest(form.action, { method: 'POST', body: new FormData(form) });
+                    closeRitualEditPanel();
+                    await loadAgentRituals();
+                } catch (e) {
+                    errEl.textContent = e.message;
+                    errEl.style.display = 'block';
+                }
+            });
+        })();
+
+        refreshCombat(true);
+        (window.pollWhenVisible || setInterval)(refreshCombat, 1500);
+        if (!isAdminView) {
+            try {
+                if (localStorage.getItem('combatInventoryCollapsed') === '1') {
+                    toggleCombatInventory(true);
+                }
+                if (localStorage.getItem('combatRitualsCollapsed') === '1') {
+                    toggleCombatRituals(true);
+                }
+            } catch (e) {}
+            refreshMyCombatInventory();
+            setInterval(refreshMyCombatInventory, 4000);
+        }
+
+        function openAgentLightbox(src, name) {
+            document.getElementById('agent-lightbox-img').src = src;
+            document.getElementById('agent-lightbox-caption').textContent = name || '';
+            document.getElementById('agent-lightbox').classList.add('open');
+        }
+
+        function closeAgentLightbox(evt) {
+            if (evt && evt.target && (evt.target.id === 'agent-lightbox-img' || evt.target.id === 'agent-lightbox-tilt')) return;
+            document.getElementById('agent-lightbox').classList.remove('open');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeAgentLightbox();
+                if (isAdminView) {
+                    const ritualEdit = document.getElementById('ritual-edit-overlay');
+                    if (ritualEdit && ritualEdit.classList.contains('is-visible')) closeRitualEditPanel();
+                    else closeAgentRituals();
+                }
+            }
+        });
+
+        (function () {
+            const TILT_LIMIT = 15;
+            const SCALE = 1.05;
+            const PERSPECTIVE = 1200;
+            const DIR = -1;
+
+            const wrap = document.getElementById('agent-lightbox-tilt');
+            const img = document.getElementById('agent-lightbox-img');
+            const spotlightWrap = document.getElementById('agent-tilt-spotlight-wrap');
+            const spotlight = document.getElementById('agent-tilt-spotlight');
+            if (!wrap || !img) return;
+
+            const RESET_TRANSFORM = `perspective(${PERSPECTIVE}px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            wrap.style.transform = RESET_TRANSFORM;
+
+            function handleMove(e) {
+                const rect = wrap.getBoundingClientRect();
+                const px = (e.clientX - rect.left) / rect.width;
+                const py = (e.clientY - rect.top) / rect.height;
+
+                const xRot = (py - 0.5) * (TILT_LIMIT * 2) * DIR;
+                const yRot = (px - 0.5) * -(TILT_LIMIT * 2) * DIR;
+
+                wrap.style.transform =
+                    `perspective(${PERSPECTIVE}px) rotateX(${xRot}deg) rotateY(${yRot}deg) scale3d(${SCALE}, ${SCALE}, ${SCALE})`;
+
+                if (spotlight) {
+                    spotlight.style.left = (px * 100) + '%';
+                    spotlight.style.top = (py * 100) + '%';
+                }
+            }
+
+            wrap.addEventListener('pointerenter', () => {
+                wrap.style.transition = 'none';
+                if (spotlightWrap) spotlightWrap.classList.add('is-visible');
+            });
+            wrap.addEventListener('pointermove', handleMove);
+            wrap.addEventListener('pointerleave', () => {
+                wrap.style.transition = 'transform 0.2s ease-out';
+                wrap.style.transform = RESET_TRANSFORM;
+                if (spotlightWrap) spotlightWrap.classList.remove('is-visible');
+            });
+        })();
+        </script>
+        <script src="{{ url_for('static', filename='image-editor.js') }}?v={{ asset_version('image-editor.js') }}"></script>
+        {% include '_chat_dock.html' %}
+    </body>
+</html>

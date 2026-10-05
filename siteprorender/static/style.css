@@ -1,0 +1,8229 @@
+/* =========================================================
+   Ordem Paranormal — Folha de Estilo
+   Índice:
+     1. Variáveis e reset
+     2. Tipografia e elementos base
+     3. Layout (container, header, navegação por abas)
+     4. Login
+     5. Formulários e botões
+     6. Painel do jogador (stats, avatar, ficha de personagem)
+     7. Aba Agentes
+     8. Aba Campanha
+     9. Painel do admin (usuários, inventário, rituais)
+    10. Editor de imagem (recorte em perspectiva)
+    11. Aba Chat
+    12. Responsivo
+   ========================================================= */
+
+/* 1. Variáveis e reset ------------------------------------ */
+
+:root {
+    --bg: #050505;
+    --bg-raised: #101010;
+    --bg-inset: #0c0c0c;
+    --fg: #f5f5f5;
+    --accent: #c62f27;
+    --accent-soft: rgba(198, 47, 39, 0.12);
+    --border: #2a2a2a;
+    --border-strong: #454545;
+    --muted: rgba(245, 245, 245, 0.58);
+    --online: #3fca57;
+
+    --elem-energia: #a566e8;
+    --elem-conhecimento: #e6c229;
+    --elem-medo: #f2f2f2;
+    --elem-morte: #0a0a0a;
+    --elem-sangue: #e2453c;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+
+    --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.35);
+    --shadow-lift: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+    --online-soft: rgba(63, 202, 87, 0.12);
+
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    /* Evita que qualquer elemento largo demais (formulários, tabelas,
+       imagens) crie uma barra de rolagem horizontal, o que empurraria
+       o conteúdo para a esquerda e quebraria a centralização do site. */
+    overflow-x: hidden;
+}
+
+body {
+    background:
+        radial-gradient(circle at top, rgba(198, 47, 39, 0.06), transparent 55%),
+        var(--bg);
+    background-attachment: fixed;
+    color: var(--fg);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+
+a {
+    color: var(--fg);
+}
+
+::selection {
+    background: var(--accent);
+    color: var(--fg);
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: var(--radius-sm);
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* 2. Tipografia e elementos base --------------------------- */
+
+.section-title {
+    font-size: 0.82rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-strong);
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+}
+
+.section-subtitle {
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 26px 0 14px;
+}
+
+.npc-section-title {
+    margin-top: 44px;
+}
+
+.section-subtitle:first-of-type {
+    margin-top: 4px;
+}
+
+.capacity-note {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: none;
+    letter-spacing: 0;
+    margin-left: 10px;
+}
+
+.capacity-note.capacity-note-over {
+    color: #ff5b50;
+    font-weight: 700;
+}
+
+.affinity-admin-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.affinity-admin-row .capacity-note {
+    margin-left: 0;
+}
+
+/* Botão "Remover Afinidade" alinhado à mesma altura do chip do
+   elemento ao lado (22px, box-sizing: border-box) — sem herdar as
+   margens/padding padrão de botão, que o deixavam bem mais alto. */
+.affinity-remove-btn.btn-sm {
+    height: 22px;
+    padding: 0 12px;
+    margin: 0;
+    line-height: 1;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Aviso bem visível de sobrecarga de inventário: some quando a carga
+   está dentro do limite e aparece em destaque (com leve pulsação)
+   assim que o total de espaços ultrapassa o limite definido. */
+.capacity-overload-alert {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: rgba(198, 47, 39, 0.16);
+    border: 1px solid var(--accent);
+    color: #ff8079;
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    margin: 4px 0 18px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    animation: capacity-overload-pulse 1.6s ease-in-out infinite;
+}
+
+.capacity-overload-alert.is-visible {
+    display: flex;
+}
+
+.capacity-overload-alert .capacity-overload-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+@keyframes capacity-overload-pulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(198, 47, 39, 0); }
+    50% { box-shadow: 0 0 16px rgba(198, 47, 39, 0.6); }
+}
+
+.stat-box.stat-box-overload {
+    border-top: 2px solid var(--accent);
+    background: rgba(198, 47, 39, 0.12);
+}
+
+.stat-box.stat-box-overload .value {
+    color: #ff8079;
+    font-weight: 700;
+}
+
+.stat-box-overload-label {
+    margin-top: 8px;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    font-weight: 700;
+    color: #ff8079;
+    animation: capacity-overload-pulse 1.6s ease-in-out infinite;
+}
+
+.empty {
+    color: var(--muted);
+    font-style: italic;
+    padding: 10px 2px;
+}
+
+.badge {
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: var(--radius-sm);
+    padding: 3px 9px;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+.badge-muted {
+    border-color: var(--border-strong);
+    color: var(--muted);
+    background: transparent;
+}
+
+.badge-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    line-height: 1;
+    padding: 4px 7px;
+    margin-left: 2px;
+    vertical-align: -3px;
+}
+
+/* Agrupa cada bloco do painel (Personagem, Pontos, Atributos, Inventário,
+   Rituais...) num "cartão" com fundo e borda próprios, para que fique
+   visualmente claro onde uma seção termina e a próxima começa. */
+.panel-section {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px 22px 26px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-card);
+}
+
+.panel-section > .section-title:first-child,
+.panel-section > .section-title.panel-section-title {
+    margin-top: 0;
+}
+
+.panel-section .section-title {
+    margin-bottom: 18px;
+}
+
+.panel-section .section-subtitle:first-of-type {
+    margin-top: 0;
+}
+
+/* 3. Layout ------------------------------------------------- */
+
+.container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 48px 22px 90px;
+}
+
+/* Usada na aba Perícias: sem limite de largura e com laterais
+   generosas, para a grade de perícias ocupar bem a tela. As laterais
+   de 260px só fazem sentido em telas bem largas — sem os breakpoints
+   abaixo, uma tela de notebook/tablet (900-1300px) ficava com quase
+   metade da largura tomada por padding vazio, espremendo a grade de
+   perícias numa faixa estreita demais para as 4 colunas dela. */
+.container-wide {
+    max-width: none;
+    padding-left: 260px;
+    padding-right: 260px;
+}
+
+@media (max-width: 1400px) {
+    .container-wide {
+        padding-left: 120px;
+        padding-right: 120px;
+    }
+}
+
+@media (max-width: 1000px) {
+    .container-wide {
+        padding-left: 40px;
+        padding-right: 40px;
+    }
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-strong);
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+}
+
+header h1 {
+    font-size: 1.05rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: normal;
+}
+
+header a {
+    text-decoration: none;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 11px 20px;
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    transition: background-color 0.18s var(--ease), border-color 0.18s var(--ease), color 0.18s var(--ease);
+}
+
+header a:hover {
+    background: var(--fg);
+    border-color: var(--fg);
+    color: var(--bg);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-actions a.active {
+    background: var(--fg);
+    border-color: var(--fg);
+    color: var(--bg);
+}
+
+/* Navegação por abas (Painel / Agentes / Campanha) */
+/* As abas nunca podem passar da largura do container, em qualquer
+   resolução. Grade de colunas iguais (min-width:0 impede o conteúdo de
+   empurrar a coluna para fora):
+   - até 520px: 2 colunas; 521px a 1000px: 4 colunas; 1001px+: 8 colunas. */
+.tab-nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 36px;
+}
+
+.tab-link {
+    position: relative;
+    min-width: 0;
+    text-align: center;
+    white-space: nowrap;
+    text-decoration: none;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 10px 6px;
+    font-size: 0.74rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    transition: background-color 0.18s var(--ease), border-color 0.18s var(--ease), color 0.18s var(--ease);
+}
+
+.tab-link:hover {
+    border-color: var(--fg);
+    color: var(--fg);
+}
+
+.tab-link.active {
+    background: var(--fg);
+    border-color: var(--fg);
+    color: var(--bg);
+}
+
+/* Bolinha de "mensagem não lida" sobre a aba do Chat, visível em
+   qualquer outra página do site enquanto houver mensagens novas. */
+.tab-unread-dot {
+    display: none;
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 70%, transparent);
+    animation: agent-online-pulse 2s ease-in-out infinite;
+}
+
+.tab-link.has-unread .tab-unread-dot {
+    display: block;
+}
+
+/* 4. Login ---------------------------------------------------- */
+
+.login-box {
+    max-width: 360px;
+    margin: 14vh auto;
+    padding: 40px 34px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lift);
+}
+
+.login-box h1 {
+    font-size: 1.15rem;
+    font-weight: normal;
+    letter-spacing: 3px;
+    text-align: center;
+    margin-bottom: 32px;
+    text-transform: uppercase;
+}
+
+.login-box button {
+    width: 100%;
+}
+
+/* 5. Formulários e botões -------------------------------------- */
+
+/* Padrão único de tipografia para títulos (labels) de inputs/selects.
+   Toda label do site usa a mesma fonte, peso, estilo, transformação e
+   espaçamento — o único atributo que pode variar de um campo para
+   outro é o font-size, definido pontualmente em cada classe/label
+   específica quando necessário. */
+label {
+    font-family: inherit;
+    font-weight: normal;
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+}
+
+input, textarea, select, button {
+    background: var(--bg-inset);
+    color: var(--fg);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    transition: background-color 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+input, textarea, select {
+    font-size: 0.95rem;
+    padding: 11px 13px;
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+/* O texto de um <select> fechado é desenhado pelo próprio sistema
+   operacional em muitos navegadores (isso é bem comum no Android), que
+   ignora a fonte definida no CSS — por isso "Courier New" não pegava
+   nesse campo mesmo herdando a fonte certa. Tirando a aparência nativa
+   (appearance: none) e desenhando a setinha à mão, o texto passa a ser
+   renderizado 100% pelo nosso CSS, com a mesma fonte dos outros campos
+   em qualquer navegador/celular. */
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    font-family: 'Courier New', monospace;
+    text-align: left;
+    padding-right: 34px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'><path d='M1 1l6 6 6-6' fill='none' stroke='%23f5f5f5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' opacity='0.75'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 13px center;
+    background-size: 12px 8px;
+}
+
+option {
+    font-family: 'Courier New', monospace;
+}
+
+input:hover, textarea:hover, select:hover {
+    border-color: var(--muted);
+}
+
+input:focus, textarea:focus, select:focus {
+    border-color: var(--fg);
+}
+
+/* Campos de formulário já mostram o foco clareando a própria borda
+   (regra acima). O contorno vermelho genérico do :focus-visible por
+   cima disso fazia o campo parecer com erro/inválido — por isso é
+   desativado aqui só para input/textarea/select, mantendo o contorno
+   de acessibilidade para botões, links e outros elementos focáveis. */
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: none;
+}
+
+/* Mesma regra vale para os placeholders: mesma fonte, peso, estilo e
+   espaçamento em todos os campos — apenas o tamanho (herdado do
+   font-size de cada input/textarea) pode variar. */
+input::placeholder, textarea::placeholder {
+    font-family: inherit;
+    font-weight: normal;
+    font-style: normal;
+    letter-spacing: normal;
+    color: var(--muted);
+}
+
+/* <select> não suporta ::placeholder, então a opção vazia usada como
+   "placeholder" (ex.: "Categoria...", "Selecione a origem...") aparecia
+   com o texto na cor normal (var(--fg)), bem mais clara/forte que o
+   placeholder esmaecido dos campos de texto ao lado — uma inconsistência
+   visual entre os dois tipos de campo. Aqui deixamos o select com a
+   mesma cor esmaecida enquanto a opção vazia estiver selecionada; assim
+   que o usuário escolhe uma opção de verdade, a cor volta ao normal. */
+select:has(option[value=""]:checked) {
+    color: var(--muted);
+}
+
+input[type="range"] {
+    padding: 0;
+    background: transparent;
+    border: none;
+    accent-color: var(--accent);
+}
+
+input[type="file"] {
+    display: flex;
+    align-items: center;
+    padding: 8px 13px;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+input[type="file"]::file-selector-button,
+input[type="file"]::-webkit-file-upload-button {
+    margin-right: 12px;
+    padding: 7px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+input[type="file"]:hover::file-selector-button,
+input[type="file"]:hover::-webkit-file-upload-button {
+    background: var(--bg-inset);
+    border-color: var(--fg);
+}
+
+/* Remove as setas nativas dos campos numéricos, para manter todas
+   as caixas com a mesma aparência e tamanho. */
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+button {
+    cursor: pointer;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    padding: 12px 22px;
+    width: auto;
+    margin-bottom: 12px;
+}
+
+button:hover {
+    background: var(--fg);
+    border-color: var(--fg);
+    color: var(--bg);
+}
+
+/* Variante compacta, para mini-botões dentro de cards estreitos */
+.btn-sm {
+    padding: 8px 12px;
+    font-size: 0.64rem;
+    letter-spacing: 1px;
+    line-height: 1;
+    margin-top: 12px;
+}
+
+.btn-sm2 {
+    padding: 8px 12px;
+    font-size: 0.64rem;
+    letter-spacing: 1px;
+    line-height: 1;
+    margin-top: 0px;
+}
+
+.btn-delete {
+    background: transparent;
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-delete:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--fg);
+}
+
+.icon-trash {
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    fill: currentColor;
+    pointer-events: none;
+}
+
+.save-status {
+    font-size: 0.72rem;
+    color: var(--muted);
+}
+
+.error {
+    border: 1px solid var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.field-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.field-grid label, .inv-field label {
+    display: block;
+    font-size: 0.68rem;
+    margin-bottom: 7px;
+}
+
+.label-nowrap {
+    white-space: nowrap;
+}
+
+.field-grid > div {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.field-grid input, .field-grid select {
+    margin-bottom: 0;
+}
+
+.field-grid.attrs input {
+    text-align: center;
+}
+
+.inv-field {
+    margin-bottom: 14px;
+}
+
+.inv-field textarea {
+    margin-bottom: 0;
+    resize: vertical;
+    min-height: 90px;
+}
+
+.card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+    align-items: center;
+}
+
+.card-actions button {
+    margin-bottom: 0;
+}
+
+/* 6. Painel do jogador ------------------------------------------ */
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 0px;
+}
+
+.stat-box {
+    background: var(--bg-raised);
+    padding: 22px 16px;
+    text-align: center;
+    transition: background-color 0.18s var(--ease);
+}
+
+.stat-box:hover {
+    background: #151515;
+}
+
+.stat-box .label {
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.stat-box .value {
+    font-size: 1.55rem;
+    letter-spacing: 1px;
+}
+
+/* Botão de teste de atributo puro (sem perícia) na ficha do jogador */
+.attr-stat-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 10px;
+}
+
+.attr-roll-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}
+
+.d20-icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    fill: currentColor;
+}
+
+.field-grid.attrs .attr-roll-btn {
+    margin: 8px auto 0;
+}
+
+.field-grid.attrs .attr-roll-feedback {
+    text-align: center;
+}
+
+.attr-roll-feedback {
+    display: block;
+    height: 2.3em;
+    line-height: 1.15em;
+    overflow: hidden;
+    font-size: 0.68rem;
+    color: var(--online);
+    letter-spacing: 0.4px;
+}
+
+.attr-roll-feedback.is-error {
+    color: #d94f4f;
+}
+
+/* Roda de Atributos (SVG central com os 5 atributos nas pontas) ---- */
+.attr-wheel {
+    max-width: 460px;
+    margin: 4px auto 0;
+}
+
+.attr-wheel-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.attr-wheel-link {
+    stroke: var(--border-strong);
+    stroke-width: 3;
+}
+
+.attr-wheel-center-circle {
+    fill: var(--bg-inset);
+    stroke: var(--accent);
+    stroke-width: 3;
+}
+
+.attr-wheel-center-text {
+    fill: var(--accent);
+    font-size: 25px;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+}
+
+.attr-wheel-sat-circle {
+    fill: var(--bg-raised);
+    stroke: var(--border-strong);
+    stroke-width: 3;
+    transition: stroke 0.18s var(--ease);
+}
+
+.attr-wheel-sat-circle:hover {
+    stroke: var(--accent);
+}
+
+/* Bloco (número + nome) centralizado exatamente no meio de cada círculo.
+   Sobrescreve o .attr-stat-box flex antigo: aqui os filhos são todos
+   position:absolute, então o centro do círculo fica sempre exato. */
+.attr-wheel .attr-stat-box {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+}
+
+.attr-wheel-core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+    width: 100%;
+}
+
+.attr-wheel-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: inherit;
+}
+
+.attr-wheel-input {
+    width: 78px;
+    font-size: 2.1rem;
+    font-weight: 700;
+    line-height: 1;
+    color: inherit;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--border-strong);
+    text-align: center;
+    pointer-events: auto;
+    padding: 0 0 2px;
+}
+
+.attr-wheel-input:focus {
+    outline: none;
+    border-bottom-color: var(--accent);
+}
+
+.attr-wheel-label {
+    font-size: 0.8rem;
+    letter-spacing: 2.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 8px;
+}
+
+.attr-wheel-btn {
+    position: absolute;
+    top: calc(50% + 56px);
+    left: 50%;
+    transform: translate(-50%, 0);
+    pointer-events: auto;
+}
+
+.attr-wheel-feedback {
+    position: absolute;
+    top: calc(50% + 88px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 170px;
+    height: auto;
+    overflow: visible;
+    text-align: center;
+    white-space: normal;
+}
+
+/* Roda de Atributos ilustrada (arte em SVG desenhada à mão, com os
+   valores posicionados dentro dos círculos, acima do nome de cada
+   atributo). O preenchimento da arte usa currentColor via classe para
+   se adaptar ao tema escuro do site. */
+.attr-art-fill {
+    fill: var(--fg);
+}
+
+.attr-art-value-box {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.attr-wheel-plus-btn {
+    pointer-events: auto;
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    margin: 0;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: rgba(198, 47, 39, 0.15);
+    color: var(--accent);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.attr-wheel-plus-btn:hover {
+    background: rgba(198, 47, 39, 0.32);
+    transform: scale(1.08);
+}
+
+.attr-wheel-plus-btn[hidden] {
+    display: none;
+}
+
+.attr-art-value {
+    font-size: 100px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--accent);
+}
+
+.attr-wheel .attr-art-stat-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: static;
+}
+
+/* Versão editável do valor sobre a arte (usada no painel do admin, onde o
+   atributo pode ser digitado em vez de apenas exibido). */
+.attr-art-input {
+    pointer-events: auto;
+    width: 160px;
+    font-size: 70px;
+    border-bottom-width: 3px;
+    color: var(--accent);
+}
+
+.attr-art-btn {
+    width: 58px;
+    height: 58px;
+    margin-top: 8px;
+}
+
+.attr-art-btn .d20-icon {
+    width: 29px;
+    height: 29px;
+}
+
+.attr-art-feedback {
+    font-size: 22px;
+    height: auto;
+    overflow: visible;
+    line-height: 1.2;
+    text-align: center;
+}
+
+/* ---------------------------------------------------------------------
+   Padrão único de pop-up/modal do site. Todo overlay em tela cheia
+   (rolagem de dado, alertas, confirmações, painel de ataque, editor de
+   imagem, lightbox do mural) compartilha o mesmo fundo esmaecido com
+   leve desfoque (rgba(5,5,5,0.85) + blur 3px) e o mesmo z-index (1000).
+   Toda caixa central compartilha a mesma cor de fundo (--bg-raised),
+   raio de borda (--radius-lg), sombra (--shadow-lift) e animação de
+   entrada (modal-pop-in). As variações semânticas (cor de destaque
+   neutra/sucesso/padrão) usam só a cor da borda por cima dessa base. */
+@keyframes modal-pop-in {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Pop-up exibido ao rolar um dado (testes de atributo) ---------------- */
+.roll-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 5, 5, 0.85);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.roll-popup-overlay.is-visible {
+    display: flex;
+}
+
+.roll-popup {
+    position: relative;
+    background: var(--bg-raised);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-lg);
+    padding: 34px 46px;
+    min-width: 260px;
+    max-width: 92vw;
+    text-align: center;
+    box-shadow: var(--shadow-lift);
+    animation: modal-pop-in 0.18s var(--ease);
+}
+
+.roll-popup-close {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    color: var(--muted);
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.roll-popup-close svg {
+    width: 16px;
+    height: 16px;
+}
+
+.roll-popup-close:hover {
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.roll-popup-label {
+    font-size: 1rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+}
+
+.roll-popup-total {
+    font-size: 4rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 12px;
+}
+
+.roll-popup-detail {
+    font-size: 1rem;
+    color: var(--fg);
+}
+
+.roll-popup.is-critical {
+    border-color: var(--online);
+}
+
+.roll-popup.is-critical .roll-popup-total {
+    color: var(--online);
+}
+
+/* Barras de progresso dos pontos (PV / PE / Sanidade) */
+.points-grid .stat-box {
+    border-top: 2px solid transparent;
+}
+
+.defesa-section {
+    margin-top: 14px;
+}
+
+/* Este contorno arredondado próprio serve para quando a Defesa aparece
+   sozinha numa mini-grade separada (painel do jogador). Por isso fica
+   restrito a esse contexto (.defesa-section) — se aplicasse sempre,
+   quebraria o visual quando a mesma classe é reaproveitada dentro da
+   grade combinada de status do admin (PV/PE/Sanidade/Defesa/Carga/
+   Dinheiro), que já tem seu próprio contorno único ao redor de tudo. */
+.defesa-section .stat-box.stat-defesa {
+    background: var(--bg-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 14px 16px 10px;
+    text-align: center;
+}
+
+.stat-icon-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+
+.stat-icon {
+    flex-shrink: 0;
+}
+
+.icon-pv {
+    width: 19px;
+    height: 19px;
+    fill: var(--accent);
+    filter: drop-shadow(0 0 3px rgba(198, 47, 39, 0.5));
+}
+
+.icon-pe {
+    width: auto;
+    height: 20px;
+    fill: var(--elem-energia);
+    filter: drop-shadow(0 0 3px rgba(165, 102, 232, 0.5));
+}
+
+.icon-sanidade {
+    width: 20px;
+    height: auto;
+    fill: var(--elem-conhecimento);
+    filter: drop-shadow(0 0 3px rgba(230, 194, 41, 0.5));
+}
+
+.defesa-value-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.defesa-shield-icon {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    fill: #4a90d9;
+    filter: drop-shadow(0 0 4px rgba(74, 144, 217, 0.35));
+}
+
+.defesa-value-overlay {
+    position: absolute;
+    top: 52%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.35rem;
+    font-weight: 600;
+}
+
+.defesa-formula {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.78rem;
+    color: var(--muted);
+}
+
+.defesa-formula-base {
+    line-height: 1.4;
+}
+
+.defesa-formula-bonus {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.defesa-bonus-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-inset);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 5px 10px 5px 12px;
+}
+
+.defesa-bonus-plus {
+    color: var(--muted);
+    font-size: 0.72rem;
+}
+
+.defesa-bonus-input {
+    width: 32px;
+    margin-bottom: 0;
+    padding: 3px 2px;
+    font-size: 0.78rem;
+    text-align: center;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border-strong);
+}
+
+.defesa-bonus-input:focus {
+    outline: none;
+    border-bottom-color: var(--accent);
+}
+
+.defesa-bonus-label {
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+}
+
+.defesa-save-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.66rem;
+    color: var(--online);
+    min-height: 1em;
+}
+
+.stat-defesa .stat-bar-fill { background: #4a90d9; }
+
+.point-reduce-form {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 14px;
+}
+
+.point-reduce-form .btn-sm {
+    height: 30px;
+    margin: 0;
+    padding: 0 10px;
+    white-space: nowrap;
+}
+
+.point-reduce-form .btn-increase {
+    background: transparent;
+    border-color: var(--online);
+    color: var(--online);
+}
+
+.point-reduce-form .btn-increase:hover {
+    background: var(--online);
+    border-color: var(--online);
+    color: var(--bg);
+}
+
+.stat-bar {
+    height: 6px;
+    margin-top: 14px;
+    background: var(--bg-inset);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.stat-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--accent);
+    transition: width 0.3s var(--ease);
+}
+
+.stat-pv { border-top-color: var(--accent); }
+.stat-pv .stat-bar-fill { background: var(--accent); }
+
+.stat-pe { border-top-color: var(--elem-energia); }
+.stat-pe .stat-bar-fill { background: var(--elem-energia); }
+
+.stat-sanidade { border-top-color: var(--elem-conhecimento); }
+.stat-sanidade .stat-bar-fill { background: var(--elem-conhecimento); }
+
+/* Avatar do personagem */
+.character-header {
+    display: flex;
+    gap: 26px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 36px;
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+}
+
+.character-header-name {
+    font-size: 1.35rem;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.character-header-name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.character-header-name-row .character-header-name {
+    margin-bottom: 0;
+}
+
+.affinity-field-header:empty {
+    display: none;
+}
+
+.character-header-sub {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+/* ---- Reformulação da aba Personagem: hero + chips + NEX ---- */
+
+.character-hero {
+    display: flex;
+    gap: 26px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+}
+
+.character-hero-avatar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 0 0 auto;
+    width: 160px;
+}
+
+.avatar-frame-editable {
+    position: relative;
+    cursor: pointer;
+    display: block;
+    border-radius: var(--radius-md);
+}
+
+.avatar-edit-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+    padding: 8px;
+    background: rgba(10, 10, 10, 0.62);
+    color: #fff;
+    font-size: 0.62rem;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    border-radius: var(--radius-md);
+    opacity: 0;
+    transition: opacity 0.18s var(--ease);
+    pointer-events: none;
+}
+
+.avatar-frame-editable:hover .avatar-edit-overlay,
+.avatar-frame-editable:focus-within .avatar-edit-overlay {
+    opacity: 1;
+}
+
+.sr-only-form {
+    display: none;
+}
+
+.character-customize-row {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.character-hero-info {
+    flex: 1 1 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+}
+
+.character-chip-grid {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    justify-content: start;
+    gap: 6px 14px;
+    margin-top: 8px;
+}
+
+@media (max-width: 420px) {
+    .character-chip-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .character-customize-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+.character-chip-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nex-increase-btn {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 1px 0 0 1px;
+    border-radius: 50%;
+    font-size: 0.9rem;
+    line-height: 1;
+    text-align: center;
+}
+
+.nex-increase-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: transparent;
+    color: var(--online);
+    border-color: var(--online);
+}
+
+.character-chip-field label {
+    font-size: 0.55rem;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.panel-subcard {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    padding: 18px;
+    margin-bottom: 22px;
+}
+
+.panel-subcard:has(.character-locked-note) {
+    padding-bottom: 10px;
+}
+
+.panel-subcard-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    font-weight: bold;
+    margin-bottom: 14px;
+}
+
+.money-requests-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.money-requests-row .money-requests-section {
+    flex: 1 1 260px;
+    width: auto;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.money-requests-row .money-requests-section:nth-child(2) {
+    border-left: 1px solid var(--border);
+    padding-left: 16px;
+}
+
+@media (max-width: 720px) {
+    .money-requests-row .money-requests-section:nth-child(2) {
+        border-left: none;
+        padding-left: 0;
+    }
+}
+
+.ficha-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 14px 0;
+}
+
+.ficha-tab-btn {
+    margin: 0;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--muted);
+    border-radius: var(--radius-sm);
+    padding: 6px 14px;
+    font-size: 0.66rem;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.ficha-tab-btn:hover {
+    color: var(--fg);
+    border-color: var(--fg);
+}
+
+.ficha-tab-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--fg);
+}
+
+.ficha-tab-panel[hidden] {
+    display: none;
+}
+
+.character-selects-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.character-selects-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 200px));
+    gap: 8px;
+}
+
+@media (max-width: 480px) {
+    .character-selects-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.origin-form,
+.patente-form,
+.class-form,
+.nex-form {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.origin-form .origin-select,
+.patente-form .origin-select,
+.class-form .origin-select,
+.nex-form .origin-select {
+    width: 150px;
+}
+
+.money-display {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    margin-top: 14px;
+    padding: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-strong);
+    background: var(--bg-inset);
+    border-radius: var(--radius-md);
+}
+
+.money-display .btn-sm,
+.money-spend-form button {
+    margin-top: 0;
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
+.money-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--online);
+    letter-spacing: 0.5px;
+    line-height: 1;
+    padding: 6px 12px;
+    background: var(--online-soft);
+    border: 1px solid var(--online);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.money-spend-form {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    flex: 1 1 260px;
+    gap: 8px;
+}
+
+.money-input {
+    width: 90px;
+    margin-bottom: 0;
+    padding: 8px 10px;
+    font-size: 0.7rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+/* Botões diferenciados por ação: gastar (vermelho, alinhado ao
+   --accent usado em ações destrutivas) e solicitar (verde, mesma
+   cor do saldo, indicando entrada de dinheiro). */
+.btn-money-spend {
+    background: transparent;
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-money-spend:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--fg);
+}
+
+.btn-money-request {
+    background: transparent;
+    border-color: var(--online);
+    color: var(--online);
+}
+
+.btn-money-request:hover {
+    background: var(--online);
+    border-color: var(--online);
+    color: var(--bg);
+}
+
+.money-requests-section {
+    width: 100%;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-strong);
+}
+
+.money-requests-details summary {
+    cursor: pointer;
+    font-size: 0.66rem;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    list-style: none;
+}
+
+.money-requests-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.money-requests-details summary::before {
+    content: '▸ ';
+}
+
+.money-requests-details[open] summary::before {
+    content: '▾ ';
+}
+
+.money-requests-details summary:hover {
+    color: var(--fg);
+}
+
+.money-requests-details[open] summary {
+    margin-bottom: 8px;
+}
+
+.money-requests-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.money-request-card {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: var(--bg-inset);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+}
+
+.money-request-amount {
+    font-weight: 700;
+    color: var(--online);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.money-request-reason {
+    flex: 1;
+    min-width: 120px;
+    color: var(--muted);
+    font-size: 0.74rem;
+}
+
+.money-request-status-badge {
+    font-size: 0.6rem;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    border-radius: var(--radius-sm);
+    padding: 3px 8px;
+    white-space: nowrap;
+    border: 1px solid var(--border-strong);
+    color: var(--muted);
+}
+
+.money-request-status-badge.status-pending {
+    border-color: var(--elem-conhecimento);
+    color: var(--elem-conhecimento);
+}
+
+.money-request-status-badge.status-approved {
+    border-color: var(--online);
+    color: var(--online);
+}
+
+.money-request-status-badge.status-rejected {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.money-request-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.money-request-input {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.money-request-form textarea {
+    width: 100%;
+    resize: vertical;
+    margin-bottom: 0;
+}
+
+.money-request-error {
+    color: var(--accent);
+    font-size: 0.7rem;
+    min-height: 0;
+}
+
+.money-request-error:empty {
+    display: none;
+}
+
+.money-request-form-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.money-desc-input {
+    width: auto;
+    flex: 1 1 160px;
+    min-width: 140px;
+}
+
+.money-transactions-clear-form,
+.money-requests-clear-form {
+    display: flex;
+    justify-content: flex-start;
+    margin: 8px 0 10px;
+}
+
+.money-transactions-clear-form .btn-sm,
+.money-requests-clear-form .btn-sm {
+    margin: 0;
+}
+
+.money-transactions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.money-transaction-card {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: var(--bg-inset);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+}
+
+.money-transaction-amount {
+    font-weight: 700;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    color: var(--accent);
+}
+
+.money-transaction-card.money-transaction-in .money-transaction-amount {
+    color: var(--online);
+}
+
+.money-transaction-desc {
+    flex: 1;
+    min-width: 120px;
+    color: var(--muted);
+    font-size: 0.74rem;
+}
+
+/* Mesmo visual do select "Categoria..." do formulário de itens: fundo
+   escuro, borda, cantos arredondados e a cor esmaecida some assim que
+   uma opção de verdade é escolhida (herda a regra de placeholder do
+   select base, em vez de ficar sempre esmaecido). */
+.origin-select {
+    width: 150px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 0;
+    padding: 6px 18px 6px 6px;
+    font-size: 0.6rem;
+    letter-spacing: 0.2px;
+    background-position: right 6px center;
+    background-size: 9px 5px;
+    background-color: var(--bg-inset);
+    border-color: var(--border-strong);
+}
+
+.class-track-input {
+    width: 150px;
+    margin-bottom: 0;
+    padding: 6px 6px;
+    font-size: 0.6rem;
+    letter-spacing: 0.2px;
+    background-color: var(--bg-inset);
+    border-color: var(--border-strong);
+}
+
+.avatar-frame {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 10px;
+    width: 160px;
+}
+
+.avatar-img {
+    display: block;
+    width: 160px;
+    height: 160px;
+    object-fit: cover;
+    border: 3px solid var(--agent-color, var(--border-strong));
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    max-width: 100%;
+}
+
+.avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 160px;
+    height: 160px;
+    border: 3px solid var(--agent-color, var(--border-strong));
+    border-radius: var(--radius-md);
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-align: center;
+    padding: 8px;
+    max-width: 100%;
+}
+
+.character-header-info {
+    flex: 1 1 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 200px;
+    justify-content: flex-start;
+}
+
+/* Versão compacta usada no "Meu Perfil" do admin: só tem avatar + nome,
+   então alinha o campo de nome com o topo da imagem e encolhe o quadrado
+   do avatar para não sobrar espaço vazio embaixo do formulário. */
+.character-header-compact {
+    align-items: flex-start;
+    margin-bottom: 0;
+}
+
+.character-header-compact .avatar-frame {
+    width: 120px;
+}
+
+.character-header-compact .avatar-img,
+.character-header-compact .avatar-placeholder {
+    width: 120px;
+    height: 120px;
+}
+
+.character-header-compact .character-header-info {
+    justify-content: flex-start;
+    gap: 0;
+}
+
+.display-name-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.display-name-form input[type="text"] {
+    flex: 1 1 220px;
+    margin-bottom: 0;
+}
+
+.display-name-form-compact input[type="text"] {
+    flex: 0 1 200px;
+    padding: 8px 10px;
+    font-size: 0.82rem;
+}
+
+.display-name-form-compact button {
+    padding: 8px 16px;
+}
+
+.display-name-form button {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+}
+
+.color-picker-form {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    align-items: center;
+    gap: 3px;
+    margin-bottom: 0;
+    width: 130px;
+    flex: 0 0 auto;
+}
+
+.color-picker-form input[type="color"] {
+    width: 26px;
+    height: 22px;
+    padding: 2px;
+    margin-bottom: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-inset);
+    cursor: pointer;
+}
+
+.color-picker-form button {
+    width: 100%;
+    height: 22px;
+    padding: 0 8px;
+    margin-bottom: 0;
+    font-size: 0.6rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+}
+
+.title-picker-form {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+.title-picker-form input[type="color"] {
+    flex: 0 0 26px;
+    width: 26px;
+    height: 22px;
+    padding: 2px;
+    margin-bottom: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-inset);
+    cursor: pointer;
+}
+
+.title-picker-form input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    height: 22px;
+    margin-bottom: 0;
+    padding: 3px 6px;
+    font-size: 0.66rem;
+}
+
+.title-picker-form button {
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 0 8px;
+    margin-bottom: 0;
+    font-size: 0.6rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+    .color-picker-form,
+    .title-picker-form {
+        width: 100%;
+        flex: 1 1 auto;
+    }
+}
+
+.character-header-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: -4px;
+}
+
+.character-header-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+}
+
+.nex-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nex-inline #character-header-title-nex {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    opacity: 0.75;
+}
+
+.user-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.avatar-img-sm {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    flex: 0 0 auto;
+}
+
+/* Ficha do personagem */
+.character-sheet-form textarea {
+    min-height: 90px;
+    resize: vertical;
+}
+
+/* Página de Anotações: um único campo grande, sem a caixa/label
+   das seções da ficha (que ficaria vazia aqui). */
+.notes-form .inv-field {
+    margin-bottom: 14px;
+}
+
+.notes-form textarea {
+    min-height: 340px;
+    resize: vertical;
+}
+
+.notes-form button {
+    margin-bottom: 0;
+}
+
+.avatar-placeholder-sm {
+    width: 64px;
+    height: 64px;
+    font-size: 0.58rem;
+    padding: 4px;
+    flex: 0 0 auto;
+}
+
+/* Agrupa cada categoria (Bloqueios, Atributos, Pontos, Ficha, Inventário,
+   Habilidades, Rituais) dentro do card de um agente, para separar
+   visualmente onde uma termina e a próxima começa. */
+.category-block {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-inset);
+    padding: 16px 18px 20px;
+    margin-bottom: 18px;
+}
+
+.category-block:last-child {
+    margin-bottom: 0;
+}
+
+.category-block .section-subtitle:first-child {
+    margin-top: 0;
+}
+
+/* Linha compacta de bloqueios, no topo dos detalhes do agente */
+.lock-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.lock-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: none;
+    letter-spacing: normal;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.lock-checkbox input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+}
+
+.lock-row .btn-sm {
+    margin-bottom: 0;
+}
+
+/* Painel de bloqueios sempre visível no card do agente (fora do "detalhes completos"),
+   pra liberar bloqueios de um jogador específico com rapidez. */
+.lock-panel {
+    border-color: var(--online);
+    background: rgba(63, 202, 87, 0.05);
+    padding-bottom: 16px;
+}
+
+.lock-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    margin-bottom: -12px;
+}
+
+.btn-unlock-all {
+    background: transparent;
+    border-color: var(--online);
+    color: var(--online);
+    margin-bottom: 0;
+}
+
+.btn-unlock-all:hover {
+    background: var(--online);
+    border-color: var(--online);
+    color: var(--bg);
+}
+
+.character-warning {
+    font-size: 0.72rem;
+    color: var(--accent);
+    margin-bottom: 14px;
+}
+
+.pe-round-limit-note {
+    font-size: 0.68rem;
+    color: var(--elem-energia);
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
+.pe-round-limit-note strong {
+    margin-left: 4px;
+    letter-spacing: 0.3px;
+}
+
+.stat-box.stat-pe {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 14px;
+}
+
+.stat-box.stat-pe .pe-round-limit-note {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 14px 0 0;
+}
+
+.character-sheet-view {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 0px;
+}
+
+/* Cada campo da ficha (Nome, Físico, História, Descrição) vira um bloco
+   próprio, com borda de destaque à esquerda, pra ficar claro onde um
+   campo termina e o próximo começa. */
+.character-field {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    padding: 12px 16px;
+    margin-bottom: 0;
+}
+
+.character-field-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.68rem;
+    font-weight: bold;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+
+.character-field-value {
+    white-space: pre-line;
+    line-height: 1.65;
+}
+
+/* Mesma separação em blocos, agora no formulário editável (jogador
+   preenchendo a ficha, ou mestre editando pelo painel de admin). */
+.character-sheet-form .inv-field {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    padding: 12px 16px;
+    margin-bottom: 14px;
+}
+
+.character-sheet-form .inv-field:last-of-type {
+    margin-bottom: 0;
+}
+
+.character-sheet-form .inv-field label {
+    font-weight: bold;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.character-locked-note {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-style: italic;
+    letter-spacing: 0.5px;
+    margin-top: 8px;
+    margin-bottom: 0;
+}
+
+/* 6b. Aba Perícias ------------------------------------------------- */
+
+.skill-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+    margin-bottom: 18px;
+}
+
+.skill-legend-item strong {
+    color: var(--fg);
+    margin-right: 4px;
+}
+
+.skill-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-bottom: 36px;
+}
+
+.skill-row {
+    background: var(--bg-raised);
+    padding: 14px 20px;
+    display: grid;
+    grid-template-columns: minmax(160px, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    transition: background-color 0.18s var(--ease);
+}
+
+.skill-row:hover {
+    background: #151515;
+}
+
+.skill-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.skill-custom-name {
+    background: var(--bg-inset);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    padding: 6px 10px;
+    min-width: 160px;
+    margin-bottom: 0;
+}
+
+.skill-custom-name:focus {
+    border-color: var(--accent);
+}
+
+.skill-attr-tag {
+    background: var(--bg-inset);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    font-size: 0.64rem;
+    letter-spacing: 1px;
+    padding: 3px 7px;
+    white-space: nowrap;
+}
+
+select.skill-attr-tag {
+    font-family: inherit;
+    font-size: 0.64rem;
+    letter-spacing: 1px;
+    padding: 3px 20px 3px 7px;
+    width: auto;
+    max-width: fit-content;
+    margin-bottom: 0;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+        linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 10px) center, calc(100% - 6px) center;
+    background-size: 4px 4px, 4px 4px;
+    background-repeat: no-repeat;
+}
+
+select.skill-attr-tag:hover,
+select.skill-attr-tag:focus {
+    color: var(--fg);
+    border-color: var(--accent);
+    outline: none;
+}
+
+select.skill-attr-tag option {
+    background: var(--bg-raised);
+    color: var(--fg);
+}
+
+/* Agrupa tudo que vem depois da seleção de atributo (níveis de treino,
+   bônus e botão de rolar) num único bloco colado à direita da grade,
+   em vez de 3 colunas separadas — evita "buracos" entre eles em telas
+   largas e deixa claro que formam um conjunto só. */
+.skill-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    justify-self: end;
+}
+
+.skill-levels {
+    display: grid;
+    grid-template-columns: repeat(3, 52px);
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.skill-level-btn {
+    background: var(--bg-inset);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.74rem;
+    letter-spacing: 1px;
+    padding: 8px 0;
+    width: 100%;
+    margin-bottom: 0;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.18s var(--ease), border-color 0.18s var(--ease), color 0.18s var(--ease);
+}
+
+.skill-level-btn:hover {
+    border-color: var(--fg);
+    color: var(--fg);
+}
+
+.skill-level-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--fg);
+}
+
+.skill-bonus {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.skill-bonus-label {
+    font-size: 0.68rem;
+}
+
+.skill-bonus-input {
+    background: var(--bg-inset);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 0.64rem;
+    letter-spacing: 0.5px;
+    padding: 8px 10px;
+    width: 64px;
+    margin-bottom: 0;
+    text-align: center;
+}
+
+.skill-bonus-input:focus {
+    border-color: var(--accent);
+}
+
+.skill-roll {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.skill-roll-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 0.74rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    margin-bottom: 0;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.18s var(--ease);
+}
+
+.skill-roll-btn:hover {
+    opacity: 0.85;
+}
+
+.skill-roll-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* 7. Aba Agentes -------------------------------------------------- */
+
+.agent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 18px;
+}
+
+.agent-card {
+    position: relative;
+    isolation: isolate;
+    border: 1px solid color-mix(in srgb, var(--agent-color, var(--accent)) 35%, var(--border));
+    border-radius: var(--radius-lg);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-card);
+    padding: 26px 18px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+    overflow: hidden;
+    transition: transform 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+/* Brilho suave no topo do card na cor do agente, em vez de tingir o
+   cartão inteiro — dá identidade visual sem pesar a leitura do
+   conteúdo (stats, nome) contra um fundo colorido. */
+.agent-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(ellipse 140% 90% at 50% -10%, color-mix(in srgb, var(--agent-color, var(--accent)) 30%, transparent), transparent 65%);
+}
+
+.agent-card:hover {
+    border-color: color-mix(in srgb, var(--agent-color, var(--accent)) 65%, var(--muted));
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+}
+
+.agent-status-dot {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--muted);
+}
+
+button.agent-status-dot {
+    cursor: pointer;
+}
+
+button.agent-status-dot:hover {
+    background: var(--muted);
+    filter: brightness(1.3);
+}
+
+.agent-status-dot.online {
+    background: var(--online);
+    box-shadow: 0 0 0 rgba(63, 202, 87, 0.5);
+    animation: agent-online-pulse 2.2s ease-in-out infinite;
+}
+
+button.agent-status-dot.online:hover {
+    background: var(--online);
+}
+
+.agent-status-dot.offline {
+    background: var(--accent);
+}
+
+button.agent-status-dot.offline:hover {
+    background: var(--accent);
+}
+
+@keyframes agent-online-pulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(63, 202, 87, 0.5); }
+    50% { box-shadow: 0 0 8px rgba(63, 202, 87, 0.8); }
+}
+
+.agent-avatar {
+    width: 84px;
+    height: 84px;
+    object-fit: cover;
+    border: 2px solid color-mix(in srgb, var(--agent-color, var(--accent)) 70%, var(--border-strong));
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--agent-color, var(--accent)) 14%, transparent), var(--shadow-card);
+    margin-bottom: 4px;
+}
+
+.agent-avatar-clickable {
+    cursor: pointer;
+    transition: transform 0.18s var(--ease), filter 0.18s var(--ease);
+}
+
+.agent-avatar-clickable:hover {
+    transform: scale(1.05);
+    filter: brightness(0.85);
+}
+
+.agent-avatar-placeholder {
+    width: 84px;
+    height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed color-mix(in srgb, var(--agent-color, var(--accent)) 55%, var(--border-strong));
+    border-radius: 50%;
+    color: var(--muted);
+    font-size: 1.3rem;
+    margin-bottom: 4px;
+}
+
+.agent-name {
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.agent-name .badge {
+    margin-left: 0;
+}
+
+/* Ícone do elemento de afinidade do jogador, ao lado do nome na aba de
+   Agentes. fill:currentColor + color inline (por elemento) faz o SVG
+   herdar a cor certa sem precisar de uma classe por elemento. */
+.agent-element-icon {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    fill: currentColor;
+}
+
+.agent-username {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: -6px;
+}
+
+.agent-title {
+    font-size: 0.7rem;
+    font-style: italic;
+    letter-spacing: 0.3px;
+    text-align: center;
+    opacity: 0.9;
+    margin-top: -4px;
+}
+
+.agent-patente {
+    font-size: 0.64rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--agent-color, var(--accent)) 85%, var(--fg));
+    font-weight: 700;
+    border: 1px solid color-mix(in srgb, var(--agent-color, var(--accent)) 55%, var(--border-strong));
+    background: color-mix(in srgb, var(--agent-color, var(--accent)) 14%, transparent);
+    border-radius: var(--radius-sm);
+    padding: 2px 10px;
+    margin-top: 2px;
+}
+
+.agent-status-label {
+    font-size: 0.66rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.npc-card {
+    padding-top: 20px;
+}
+
+.npc-description {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.4;
+}
+
+/* Descrição das criaturas no combate: respeita as quebras de linha
+   digitadas pelo mestre (o campo agora é um textarea). */
+.combat-card .npc-description {
+    white-space: pre-line;
+    word-break: break-word;
+    width: 100%;
+    /* A caixa ocupa todo o espaço que sobra no card (cards da mesma linha
+       têm a mesma altura). A base de 7.5em é o tamanho mínimo: descrições
+       longas não esticam o card, rolam por dentro. */
+    flex: 1 0 7.5em;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+}
+
+.combat-card .npc-description::-webkit-scrollbar {
+    width: 5px;
+}
+
+.combat-card .npc-description::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 3px;
+}
+
+.combat-desc-input {
+    resize: vertical;
+    min-height: 64px;
+    font-family: inherit;
+}
+
+/* Selo "[TOP SECRET]" do card do admin — texto monoespaçado vermelho com
+   efeito de scramble/decodificação (ver script no fim de agentes.html),
+   remetendo a um carimbo de documento confidencial. */
+.agent-top-secret {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #ff4b42;
+    text-shadow: 0 0 6px rgba(255, 75, 66, 0.55), 0 0 16px rgba(255, 75, 66, 0.25);
+    white-space: nowrap;
+}
+
+.agent-top-secret-glyph {
+    color: color-mix(in srgb, #ff4b42 55%, var(--muted));
+    text-shadow: none;
+}
+
+.agent-stats {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 8px;
+    padding-top: 4px;
+    border-top: 1px solid var(--border);
+}
+
+.agent-stats.agent-stats-hidden {
+    display: none;
+}
+
+.agent-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.72rem;
+    padding: 6px 2px;
+}
+
+.agent-stat-row + .agent-stat-row {
+    border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.agent-stat-label {
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-size: 0.64rem;
+}
+
+.agent-stat-label-pv {
+    color: var(--accent);
+}
+
+.agent-stat-label-pe {
+    color: var(--elem-energia);
+}
+
+.agent-stat-label-sanidade {
+    color: var(--elem-conhecimento);
+}
+
+.agent-stat-label-defesa {
+    color: #4a90d9;
+}
+
+.agent-stat-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Botõezinhos de +/- para o jogador ajustar PV/PE/Sanidade direto no
+   card de combate, sem crescer a linha nem o card (tamanho fixo e
+   pequeno, alinhados no espaço que já existia ao lado do valor). */
+.agent-stat-value-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.combat-stat-controls {
+    display: inline-flex;
+    gap: 2px;
+    flex: 0 0 auto;
+}
+
+.combat-stat-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    font-family: inherit;
+    background: transparent;
+    margin: 0;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px;
+    height: 13px;
+    flex: 0 0 auto;
+    font-size: 9px;
+    line-height: 1;
+    border-radius: 3px;
+    border: 1px solid var(--border-strong);
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.combat-stat-btn:hover:not(:disabled) {
+    color: var(--fg);
+    border-color: var(--accent);
+}
+
+.combat-stat-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* 7b. Aba Combate ------------------------------------------------- */
+
+.combat-admin-section {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+}
+
+.combat-add-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 14px;
+    align-items: stretch;
+}
+
+.combat-add-box {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-inset);
+    padding: 18px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s var(--ease);
+}
+
+.combat-add-box:focus-within {
+    border-color: var(--border-strong);
+}
+
+.combat-add-box .section-subtitle {
+    margin: 0 0 14px;
+}
+
+/* Dentro dos cards de combate o formulário vira uma pilha vertical de
+   linhas de largura total. Isso evita o problema do layout em flex-wrap
+   original: com o card espremido em ~300px (metade do container, menos
+   padding), os itens com flex-basis somados (nome + upload + descrição +
+   bônus + swatch + botão) não cabiam e vazavam para fora da borda do
+   card. Empilhando em coluna, cada linha sempre cabe na largura do card,
+   qualquer que seja o tamanho da tela. */
+.combat-add-box .npc-add-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 0;
+    flex: 0 0 auto;
+}
+
+/* Segundo formulário dentro do mesmo quadro (NPC de Suporte, abaixo do
+   de agente), separado por uma linha fina. */
+.combat-subtitle-spaced {
+    margin-top: 18px !important;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.combat-add-box .npc-add-form input[type="text"],
+.combat-add-box .npc-add-form select {
+    width: 100%;
+    flex: none;
+}
+
+.combat-add-box .npc-add-form > button {
+    align-self: flex-end;
+    min-width: 130px;
+}
+
+/* Linha auxiliar (upload+cor, bônus+botão): flex com min-width: 0 nos
+   filhos para que eles consigam encolher abaixo da largura "natural"
+   do conteúdo em vez de forçar o card a alargar. */
+.combat-form-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.combat-form-row .perspective-upload {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+.combat-form-row-end {
+    justify-content: space-between;
+}
+
+.combat-form-row-end button {
+    flex: 0 0 auto;
+}
+
+.combat-bonus-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+.combat-empty-hint {
+    margin-top: 10px;
+    margin-bottom: 0;
+}
+
+/* Linha final do painel do mestre: rolar tudo o que falta à esquerda,
+   encerrar o combate (ação destrutiva) à direita, separadas do resto por
+   uma linha divisória. */
+.combat-toolbar-row {
+    margin-top: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.combat-end-form {
+    margin: 0;
+}
+
+/* Botão de editar uma criatura: mesma posição do botão de remover, no
+   canto oposto (topo direito), para não colidir com ele nem com o
+   "status dot" dos agentes. */
+.combat-edit-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    color: var(--muted);
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    opacity: 0.85;
+    transition: opacity 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.combat-edit-btn svg {
+    display: block;
+    pointer-events: none;
+}
+
+.combat-edit-btn:hover {
+    opacity: 1;
+    color: var(--fg);
+    border-color: var(--border-strong);
+}
+
+/* Painel de edição de criatura: reaproveita o mesmo layout em coluna dos
+   cards de "Adicionar Monstro / Inimigo". */
+.combat-edit-panel-box {
+    max-width: 420px;
+    text-align: left;
+    align-items: stretch;
+}
+
+.combat-edit-panel-box .attack-panel-title {
+    text-align: center;
+}
+
+.combat-edit-panel-box .npc-add-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.combat-edit-panel-box .npc-add-form input[type="text"] {
+    width: 100%;
+    flex: none;
+}
+
+.combat-edit-panel-box .npc-add-form > button {
+    align-self: flex-end;
+    min-width: 130px;
+}
+
+/* Nota privada do mestre, dentro do próprio card do participante — some
+   por completo na visão dos jogadores (o backend nem envia o campo). */
+.combat-admin-note {
+    width: 100%;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+    text-align: left;
+}
+
+.combat-admin-note-label {
+    display: block;
+    font-size: 0.6rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.combat-admin-note-input {
+    width: 100%;
+    min-height: 44px;
+    resize: vertical;
+    font-size: 0.76rem;
+    line-height: 1.4;
+    padding: 8px 10px;
+    margin-bottom: 0;
+}
+
+.combat-grid {
+    min-height: 60px;
+}
+
+.combat-card {
+    padding-top: 44px;
+}
+
+/* Botão de remover participante: mesma posição do "status dot" dos
+   agentes, mas no canto oposto, para não colidir com ele. */
+.combat-remove-form {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 1;
+}
+
+.combat-remove-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+}
+
+/* Alinhamento dos cards de combate: cada faixa tem altura mínima fixa, então
+   nome (até 2 linhas), subtítulo e estado começam no mesmo ponto em todos. */
+.combat-card .agent-name {
+    min-height: 2.4em;
+    text-align: center;
+}
+
+.combat-card-sub,
+.combat-card-state {
+    width: 100%;
+    min-height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.combat-card-sub .combat-type-badge,
+.combat-card-state .npc-state-badge,
+.combat-card-state .combat-vd-chip {
+    margin: 0;
+}
+
+/* Chip do VD (Valor de Desafio) da ameaça, na cor da criatura. */
+.combat-vd-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg);
+    background: color-mix(in srgb, var(--agent-color, var(--accent)) 30%, var(--bg-raised));
+    border: 1px solid var(--agent-color, var(--accent));
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+}
+
+/* Campo de VD ao lado da iniciativa: estreito, só o número. */
+.combat-bonus-field.combat-vd-field {
+    flex: 0 0 76px;
+}
+
+.combat-card-sub .agent-title {
+    margin-top: 0;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Espaçador flexível antes da iniciativa: absorve a folga do card (os cards
+   de uma mesma linha têm a mesma altura) e empurra a iniciativa para a base,
+   deixando o texto de iniciativa no mesmo lugar em todos os cards. */
+.combat-spacer {
+    flex: 1 1 0;
+    width: 100%;
+    min-height: 2px;
+}
+
+/* Quando o card tem descrição, é ela que absorve a folga (e não o espaçador). */
+.combat-card .npc-description ~ .combat-spacer {
+    flex-grow: 0;
+}
+
+.combat-initiative-box {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.combat-initiative-label {
+    font-size: 0.64rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.combat-initiative-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: color-mix(in srgb, var(--agent-color, var(--accent)) 85%, var(--fg));
+}
+
+.combat-initiative-waiting {
+    color: var(--muted);
+    font-size: 1.1rem;
+}
+
+.combat-roll-btn {
+    width: 100%;
+}
+
+/* 8. Aba Campanha --------------------------------------------------- */
+
+.campaign-hero {
+    position: relative;
+    margin-bottom: 28px;
+}
+
+.campaign-banner-frame {
+    width: 100%;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-lift);
+    position: relative;
+}
+
+.campaign-banner-frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(5, 5, 5, 0.95) 0%, rgba(5, 5, 5, 0.25) 55%, transparent 80%);
+    pointer-events: none;
+}
+
+.campaign-banner {
+    display: block;
+    width: 100%;
+    height: 320px;
+    object-fit: cover;
+}
+
+.campaign-banner-placeholder {
+    width: 100%;
+    height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background:
+        repeating-linear-gradient(135deg, rgba(245, 245, 245, 0.025) 0 2px, transparent 2px 16px),
+        var(--bg-raised);
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+}
+
+.campaign-banner-placeholder svg {
+    opacity: 0.4;
+}
+
+.campaign-banner-remove-form {
+    margin: 0;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+}
+
+.campaign-banner-remove-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 5, 5, 0.72);
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    color: var(--danger, #e2453c);
+    margin: 0;
+    cursor: pointer;
+    transition: background 0.18s var(--ease), color 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+
+.campaign-banner-remove-btn:hover {
+    background: var(--danger, #e2453c);
+    border-color: var(--danger, #e2453c);
+    color: #fff;
+}
+
+.campaign-hero-card {
+    position: relative;
+    z-index: 1;
+    margin: -56px 20px 0;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 24px 22px;
+    box-shadow: var(--shadow-card);
+}
+
+.campaign-eyebrow {
+    font-size: 0.62rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.campaign-name {
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: normal;
+    margin-bottom: 14px;
+}
+
+.campaign-description {
+    color: var(--muted);
+    white-space: pre-line;
+    line-height: 1.75;
+    border-left: 2px solid var(--border-strong);
+    padding-left: 14px;
+}
+
+.campaign-edit-form {
+    margin-bottom: 16px;
+}
+
+.campaign-edit-form .lock-checkbox {
+    margin: 4px 0 22px;
+}
+
+.campanha-page {
+    padding-bottom: 24px;
+}
+
+.campanha-page .panel-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 22px;
+}
+
+.campanha-page .panel-section:last-child form:last-of-type {
+    margin-bottom: 0;
+}
+
+.campanha-page .panel-section:last-child form:last-of-type button:last-child {
+    margin-bottom: 0;
+}
+
+/* 9. Painel do admin ------------------------------------------------- */
+
+.money-requests-admin-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.money-request-admin-card {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--bg-inset);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+}
+
+.money-request-admin-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.money-request-admin-user {
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: var(--fg);
+    white-space: nowrap;
+}
+
+.money-request-admin-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.money-request-admin-actions .btn-sm {
+    margin-top: 0;
+}
+
+.create-user {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.create-user .section-title {
+    border: none;
+    padding: 0;
+    margin-bottom: 18px;
+}
+
+.create-user form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.create-user input {
+    flex: 1 1 160px;
+    margin-bottom: 0;
+}
+
+.create-user button {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+}
+
+.npc-admin-section {
+    margin-bottom: 40px;
+}
+
+.npc-add-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: stretch;
+    margin-bottom: 18px;
+}
+
+.npc-color-swatch {
+    flex: 0 0 auto;
+    display: block;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    align-self: center;
+    cursor: pointer;
+}
+
+.npc-color-swatch-lg {
+    width: 44px;
+    height: 44px;
+}
+
+.npc-color-swatch input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    /* O input real costuma ser maior que o quadrado que queremos mostrar
+       (o tamanho "nativo" do seletor de cor varia bastante de navegador
+       para navegador, e nem sempre respeita width/height do CSS). Ele é
+       escalado bem além do wrapper e centralizado; o "overflow: hidden"
+       do .npc-color-swatch corta o excesso, garantindo que o quadrado
+       visível tenha sempre o mesmo tamanho do botão de excluir ao lado,
+       não importa o navegador. */
+    transform: scale(2.4);
+}
+
+.npc-color-swatch input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.npc-color-swatch input[type="color"]::-webkit-color-swatch {
+    border: none;
+}
+
+.npc-color-swatch input[type="color"]::-moz-color-swatch {
+    border: none;
+}
+
+.npc-add-form input[type="text"] {
+    flex: 1 1 160px;
+    margin-bottom: 0;
+}
+
+.npc-add-form input[type="file"] {
+    flex: 1 1 200px;
+    margin-bottom: 0;
+}
+
+.npc-add-form select {
+    flex: 1 1 160px;
+    margin-bottom: 0;
+}
+
+.npc-add-form button {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+}
+
+/* Borda fina ao redor da foto do NPC, na cor cadastrada para ele. */
+.npc-color-border {
+    border: 2px solid var(--npc-color, var(--border-strong));
+}
+
+.npc-admin-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.npc-admin-card {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    padding: 10px 14px;
+    transition: opacity 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.npc-admin-card.npc-dragging {
+    opacity: 0.4;
+    border-style: dashed;
+    border-color: var(--border-strong);
+}
+
+.npc-drag-handle {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 20px;
+    color: var(--muted, #999);
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    opacity: 0.85;
+    transition: opacity 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.npc-drag-handle svg {
+    display: block;
+    pointer-events: none;
+}
+
+.npc-drag-handle:hover {
+    opacity: 1;
+    border-color: var(--border-strong);
+}
+
+.npc-drag-handle:active {
+    cursor: grabbing;
+}
+
+.npc-admin-info {
+    flex: 1 1 160px;
+    min-width: 0;
+}
+
+.npc-admin-name {
+    font-size: 0.82rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.npc-admin-desc {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.npc-state-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+
+.npc-admin-card .npc-state-form {
+    flex: 0 1 220px;
+}
+
+.npc-state-form input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    margin-bottom: 0;
+    font-size: 0.72rem;
+    padding: 0 8px;
+}
+
+.npc-state-dot {
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--state-color, transparent);
+    border: 1px solid var(--border-strong);
+}
+
+.npc-state-form .npc-state-select {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    margin-bottom: 0;
+    font-size: 0.68rem;
+    padding: 0 26px 0 12px;
+}
+
+.npc-state-form button {
+    height: 36px;
+    margin: 0;
+    padding: 0 12px;
+}
+
+.npc-state-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    font-size: 0.62rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--fg);
+    background: color-mix(in srgb, var(--state-color, #c62f27) 35%, var(--bg-raised));
+    border: 1px solid var(--state-color, #c62f27);
+    border-radius: var(--radius-sm);
+    padding: 2px 7px;
+}
+
+.npc-state-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--state-color, currentColor);
+}
+
+.npc-state-icon svg {
+    display: block;
+    width: 10px;
+    height: 10px;
+}
+
+/* "Morto" usa preto puro pra cor do estado — misturado com o fundo (já
+   quase preto) como as outras etiquetas, ele quase desaparecia. Aqui o
+   fundo fica sólido e a borda usa um cinza claro, pra continuar legível. */
+.npc-state-badge-morto {
+    background: #000;
+    border-color: var(--border-strong);
+    color: #fff;
+}
+
+.npc-state-badge-morto .npc-state-icon {
+    color: #fff;
+}
+
+.npc-color-form {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.npc-color-form input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin-bottom: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: none;
+    cursor: pointer;
+}
+
+.npc-color-form input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.npc-color-form input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: calc(var(--radius-sm) - 1px);
+}
+
+.npc-color-form input[type="color"]::-moz-color-swatch {
+    border: none;
+    border-radius: calc(var(--radius-sm) - 1px);
+}
+
+.npc-admin-card form {
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+.npc-admin-card .npc-color-form {
+    margin-left: -8px;
+}
+
+.npc-admin-card .npc-delete-form {
+    margin-left: -8px;
+}
+
+.npc-admin-card .btn-delete {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-card {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-card);
+    padding: 26px;
+    margin-bottom: 28px;
+}
+
+.user-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.user-card-header h2 {
+    font-size: 1rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: normal;
+}
+
+.user-card-header button {
+    margin-bottom: 0;
+}
+
+/* Ações do agente (estado + excluir): agrupadas, mesma altura (36px) e
+   coladas uma na outra em vez de espalhadas pelas pontas do cabeçalho. */
+.user-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.user-card-actions form {
+    margin: 0;
+}
+
+.user-card-actions .agent-state-form {
+    flex: 0 1 220px;
+    min-width: 0;
+}
+
+.user-card-actions .btn-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0;
+}
+
+@media (max-width: 560px) {
+    .user-card-actions {
+        flex: 1 1 100%;
+        margin-left: 0;
+    }
+
+    .user-card-actions .agent-state-form {
+        flex: 1 1 auto;
+    }
+}
+
+/* Resumo do agente ("de relance"), visível antes de abrir os detalhes */
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.status-dot.online {
+    background: var(--online);
+    box-shadow: 0 0 6px var(--online);
+}
+
+.status-dot.offline {
+    background: var(--accent);
+}
+
+.user-summary-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.user-summary-name {
+    font-size: 0.78rem;
+    color: var(--fg);
+    letter-spacing: 0.5px;
+}
+
+.user-summary-stats {
+    margin-bottom: 18px;
+    grid-template-columns: repeat(6, 1fr);
+}
+
+.user-summary-stats .stat-box {
+    padding: 14px 12px;
+}
+
+.user-summary-stats .stat-box .value {
+    font-size: 1.05rem;
+}
+
+.user-summary-abilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+
+.user-details > summary,
+.add-form-details summary {
+    cursor: pointer;
+    font-size: 0.72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 0;
+    border-top: 1px dashed var(--border);
+    list-style: none;
+}
+
+.user-details > summary::-webkit-details-marker,
+.add-form-details summary::-webkit-details-marker {
+    display: none;
+}
+
+/* Alguns navegadores (Chrome/Edge recentes) desenham a setinha nativa do
+   <summary> via ::marker mesmo com list-style: none no elemento — daí a
+   seta "extra" que sobrava do lado da nossa (JS). Zerando o conteúdo do
+   ::marker garante que só a seta controlada por JS apareça. */
+.user-details > summary::marker,
+.add-form-details summary::marker {
+    content: '';
+    display: none;
+}
+
+.user-details > summary::before {
+    content: '▸ ';
+}
+
+.user-details[open] > summary::before {
+    content: '▾ ';
+}
+
+/* A "add-form-details" não usa mais ::before pra seta (ela ficava travada
+   apontando pra baixo em alguns navegadores, já que o conteúdo de um
+   pseudo-elemento só é reavaliado de forma confiável quando o atributo
+   [open] muda de um jeito que o navegador reconhece de imediato). A seta
+   agora é um <span> de verdade, inserido e atualizado via JS (ver
+   notify.js), então o texto sempre reflete o estado real do details.
+   Importante: no admin, o "add-form-details" fica ANINHADO dentro do
+   "user-details" de cada usuário — por isso todas as regras acima usam
+   o combinador ">" (filho direto), e não espaço (descendente): sem isso,
+   ".user-details[open] summary::before" também "enxergava" o summary do
+   add-form-details lá dentro e desenhava uma seta extra por cima da
+   seta certa do JS. */
+.add-form-details summary::before {
+    content: none;
+}
+
+.user-details > summary:hover,
+.add-form-details summary:hover {
+    color: var(--fg);
+}
+
+.user-details[open] > summary,
+.add-form-details[open] summary {
+    margin-bottom: 22px;
+}
+
+.add-form-details:not([open]) summary {
+    padding-bottom: 8px !important;
+}
+
+/* Fechado, o "details" não mostra o formulário — sobra só a folga de
+   baixo do card em si (pensada pra caber os campos abertos), bem maior
+   que o respiro de cima do resumo (os 8px de padding-top ali em cima).
+   A classe "form-collapsed" (aplicada via JS no card, não com :has())
+   zera o padding-bottom do card: o summary já tem 8px de padding-bottom
+   próprio (igual ao padding-top dele), então zerar aqui é o que deixa a
+   folga de baixo igual à de cima — sem depender de suporte a seletores
+   CSS mais novos. */
+.panel-section.form-collapsed,
+.category-block.form-collapsed,
+.user-card.form-collapsed {
+    padding-bottom: 0 !important;
+}
+
+/* Títulos de cada bloco (Atributos, Pontos, Ficha, Inventário...) dentro do
+   card de um usuário — mais destacados para diferenciar as categorias
+   rapidamente na visão do mestre. */
+.user-details .section-subtitle {
+    font-size: 0.78rem;
+    letter-spacing: 2px;
+    color: var(--fg);
+    background: var(--bg-inset);
+    border: 1px solid var(--border-strong);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 9px 14px;
+    margin: 26px 0 16px;
+}
+
+.user-details .section-subtitle:first-of-type {
+    margin-top: 0;
+}
+
+/* Mural (imagens gerenciadas pelo admin, visíveis a todos) */
+
+.mural-upload-form {
+    margin-bottom: 26px;
+}
+
+.mural-upload-form.panel-section {
+    padding: 20px 20px 22px;
+}
+
+/* Zona de arraste/clique para escolher a imagem. O <input type="file">
+   real fica invisível por cima, cobrindo toda a área — assim o clique
+   em qualquer ponto abre o seletor de arquivo nativamente, sem JS
+   extra, e o editor de recorte em perspectiva (que ouve o 'change' do
+   próprio input) continua funcionando sem alterações. */
+.mural-dropzone {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 128px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--bg-inset);
+    cursor: pointer;
+    overflow: hidden;
+    margin-bottom: 16px;
+    transition: border-color 0.18s var(--ease), background-color 0.18s var(--ease);
+}
+
+.mural-dropzone:hover,
+.mural-dropzone:focus-within {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.mural-dropzone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    border-style: solid;
+}
+
+.mural-dropzone-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    padding: 18px 12px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.mural-dropzone-title {
+    font-size: 0.78rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--fg);
+}
+
+.mural-dropzone-hint {
+    font-size: 0.68rem;
+    color: var(--muted);
+}
+
+.mural-dropzone-preview {
+    display: none;
+    width: 100%;
+    height: 100%;
+    max-height: 220px;
+    object-fit: cover;
+    pointer-events: none;
+}
+
+.mural-dropzone.has-image {
+    border-style: solid;
+    border-color: var(--border);
+}
+
+.mural-dropzone.has-image .mural-dropzone-preview {
+    display: block;
+}
+
+.mural-dropzone.has-image .mural-dropzone-empty {
+    position: absolute;
+    inset: auto 0 0 0;
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: rgba(5, 5, 5, 0.72);
+    backdrop-filter: blur(2px);
+}
+
+.mural-dropzone.has-image .mural-dropzone-empty svg {
+    width: 14px;
+    height: 14px;
+}
+
+.mural-dropzone.has-image .mural-dropzone-hint {
+    display: none;
+}
+
+.mural-dropzone.has-image .mural-dropzone-title {
+    font-size: 0.68rem;
+    color: var(--muted);
+}
+
+.mural-dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    margin: 0;
+}
+
+.mural-upload-fields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.mural-upload-fields input[type="text"] {
+    flex: 1;
+    min-width: 180px;
+    margin-bottom: 0;
+}
+
+.mural-upload-fields select {
+    width: auto;
+    margin-bottom: 0;
+}
+
+.mural-upload-fields button {
+    margin-bottom: 0;
+    white-space: nowrap;
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.mural-upload-fields button:hover {
+    background: #e0392f;
+    border-color: #e0392f;
+    color: var(--fg);
+}
+
+.mural-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.mural-filter label {
+    font-size: 0.68rem;
+}
+
+.mural-filter select {
+    width: auto;
+    margin-bottom: 0;
+}
+
+.mural-count {
+    margin-left: auto;
+    font-size: 0.68rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.mural-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.mural-card {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+    transition: border-color 0.18s var(--ease), transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+
+.mural-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
+}
+
+.mural-img-wrap {
+    position: relative;
+    cursor: pointer;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+}
+
+.mural-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s var(--ease), filter 0.3s var(--ease);
+}
+
+.mural-img-wrap:hover .mural-img {
+    transform: scale(1.06);
+    filter: brightness(0.7);
+}
+
+/* Legenda/autor sobrepostos na base da imagem com gradiente, em vez de
+   ocupar espaço fixo abaixo — cartões sem legenda ficam do mesmo
+   tamanho dos que têm, e o texto só "pesa" visualmente quando existe. */
+.mural-img-overlay {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 22px 10px 8px;
+    background: linear-gradient(to top, rgba(5, 5, 5, 0.88), rgba(5, 5, 5, 0));
+    pointer-events: none;
+}
+
+.mural-caption {
+    font-size: 0.74rem;
+    color: var(--fg);
+    word-break: break-word;
+    line-height: 1.3;
+}
+
+.mural-author {
+    font-size: 0.6rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.mural-expand-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 5, 5, 0.72);
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    color: var(--fg);
+    margin-bottom: 0;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.18s var(--ease), transform 0.18s var(--ease);
+    pointer-events: none;
+}
+
+.mural-img-wrap:hover .mural-expand-btn {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* O botão de excluir vira um overlay absoluto (em vez de crescer no fluxo
+   normal do card). Antes ele usava max-height para "abrir" ao passar o
+   mouse, mas isso mudava a altura real do .mural-card — e como o mural usa
+   CSS Grid (que estica todos os itens de uma mesma linha para a altura do
+   maior item dela), a linha inteira crescia junto, fazendo os cards
+   vizinhos parecerem abrir a aba de excluir também. Como overlay absoluto,
+   ele desliza por cima da imagem sem nunca alterar a altura do card. */
+.mural-card form {
+    margin: 0;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+}
+
+.mural-card-view {
+    cursor: default;
+}
+
+.mural-delete-btn {
+    display: block;
+    width: 100%;
+    border-radius: 0;
+    border-width: 1px 0 0;
+    margin: 0;
+    opacity: 0;
+    transform: translateY(100%);
+    pointer-events: none;
+    transition: opacity 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.mural-card:hover .mural-delete-btn {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* Em telas sem hover (touch), o botão de excluir fica sempre visível —
+   sem isso ficaria inacessível em celular/tablet. */
+@media (hover: none) {
+    .mural-delete-btn {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    .mural-expand-btn {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+}
+
+.mural-category-tag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 2px 8px;
+    font-size: 0.6rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: rgba(5, 5, 5, 0.72);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--fg);
+}
+
+.mural-empty {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 48px 20px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    color: var(--muted);
+}
+
+.mural-empty p {
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+.mural-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+    padding: 40px 24px;
+    background: rgba(5, 5, 5, 0.85);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    cursor: zoom-out;
+}
+
+.mural-lightbox.open {
+    display: flex;
+}
+
+.mural-lightbox-img {
+    max-width: 100%;
+    max-height: 78vh;
+    object-fit: contain;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    cursor: default;
+    display: block;
+}
+
+/* O giro 3D (transform) e o recorte de cantos (overflow:hidden) ficam
+   no MESMO elemento — igual ao TiltCard de referência, onde tudo
+   (conteúdo + spotlight) gira junto dentro de um único contêiner.
+   Antes a imagem girava sozinha dentro de um wrapper parado, e nos
+   ângulos mais fortes ela "escapava" um pouco do recorte do wrapper,
+   revelando uma linha clara na borda. */
+.mural-lightbox-tilt {
+    position: relative;
+    display: flex;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-lift);
+    transform-style: preserve-3d;
+    /* Sem transition fixa aqui: ela é ligada/desligada via JS
+       (mural.html), só na saída do mouse. Se ficasse sempre ativa,
+       cada pointermove reiniciava uma transição de 0.2s a partir de
+       um estado ainda em andamento, e a inclinação ficava "correndo
+       atrás" do cursor numa animação elástica em vez de acompanhar
+       o movimento — dava sensação de travado. */
+    will-change: transform;
+}
+
+/* Brilho que segue o cursor sobre a imagem, igual ao "spotlight" do
+   TiltCard de referência: um círculo grande com gradiente radial,
+   posicionado via left/top em % (atualizado a cada pointermove) e
+   recortado pelo overflow:hidden do wrapper, que tem o mesmo raio de
+   borda da imagem por baixo. */
+.mural-tilt-spotlight-wrap {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+}
+
+.mural-tilt-spotlight-wrap.is-visible {
+    opacity: 1;
+}
+
+.mural-tilt-spotlight {
+    position: absolute;
+    width: 120%;
+    height: 120%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 55%);
+}
+
+
+.mural-lightbox-caption {
+    color: var(--fg);
+    font-size: 0.85rem;
+    text-align: center;
+    max-width: 640px;
+}
+
+.mural-lightbox-author {
+    color: var(--muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.mural-lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--muted);
+    line-height: 1;
+    border-radius: 50%;
+    margin-bottom: 0;
+    cursor: pointer;
+    transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.mural-lightbox-close svg {
+    width: 20px;
+    height: 20px;
+}
+
+.mural-lightbox-close:hover {
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Inventário */
+.capacity-form {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.capacity-form label {
+    flex: 0 0 100%;
+    font-size: 0.72rem;
+}
+
+.capacity-form input {
+    flex: 0 1 120px;
+    margin-bottom: 0;
+}
+
+.capacity-form button {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+}
+
+.capacity-form .character-warning {
+    flex: 0 0 100%;
+    margin: 4px 0 0;
+}
+
+.combat-inventory-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--border-strong);
+    font-family: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.combat-inventory-chevron {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.combat-inventory-toggle[aria-expanded="false"] .combat-inventory-chevron {
+    transform: rotate(-90deg);
+}
+
+.combat-inventory-grid {
+    overflow: hidden;
+    max-height: 2000px;
+    transition: max-height 0.25s ease, opacity 0.2s ease, margin 0.25s ease;
+    opacity: 1;
+}
+
+.combat-inventory-grid.is-collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    pointer-events: none;
+}
+
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.item-card {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-inset);
+    padding: 34px 13px 13px;
+    text-align: center;
+    transition: border-color 0.18s var(--ease), opacity 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.item-card:hover {
+    border-color: var(--border-strong);
+}
+
+.item-drag-handle {
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 20px;
+    color: var(--muted, #999);
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    opacity: 0.85;
+    transition: opacity 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.item-drag-handle svg {
+    display: block;
+    pointer-events: none;
+}
+
+.item-drag-handle:hover {
+    opacity: 1;
+    border-color: var(--border-strong);
+}
+
+.item-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Botão de editar item — mesmo estilo do de editar ritual, no canto
+   superior direito do card (a alcinha de arrastar fica centralizada). */
+.item-edit-btn {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 20px;
+    color: var(--muted, #999);
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    user-select: none;
+    opacity: 0.85;
+    transition: opacity 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.item-edit-btn svg {
+    display: block;
+    pointer-events: none;
+}
+
+.item-edit-btn:hover {
+    opacity: 1;
+    border-color: var(--border-strong);
+}
+
+.item-card.item-dragging {
+    opacity: 0.4;
+    border-style: dashed;
+    border-color: var(--border-strong);
+}
+
+.item-card.item-drop-target {
+    border-color: var(--accent, var(--border-strong));
+}
+
+.item-img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 210px;
+    margin: 0 auto 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: zoom-in;
+    transition: border-color 0.15s var(--ease);
+}
+
+.item-img:hover {
+    border-color: var(--border-strong);
+}
+
+.item-img-placeholder {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+    font-size: 1.4rem;
+    color: var(--muted);
+}
+
+.item-name {
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+    word-break: break-word;
+}
+
+.item-meta {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+}
+
+.item-fields {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.item-fields input {
+    margin-bottom: 0;
+    padding: 7px;
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+.item-description {
+    min-height: 50px;
+    font-size: 0.7rem;
+    padding: 7px;
+    margin-bottom: 10px;
+    resize: vertical;
+    text-align: left;
+}
+
+.item-image-replace-label {
+    display: block;
+    position: relative;
+    font-size: 0.62rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    padding: 10px 6px;
+    text-align: center;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.15s var(--ease), color 0.15s var(--ease), background-color 0.15s var(--ease);
+}
+
+.item-image-replace-label:hover {
+    border-color: var(--fg);
+    color: var(--fg);
+    background: var(--bg-inset);
+}
+
+.item-image-replace-label .item-image-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.item-desc-view {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: left;
+    line-height: 1.5;
+    margin: 8px 0;
+    padding: 8px 9px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    word-break: break-word;
+    white-space: pre-wrap;   /* mantém as quebras de linha digitadas */
+    /* Descrições longas não esticam o card: limita a ~6 linhas e rola por dentro */
+    max-height: 9em;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+}
+
+.item-desc-view::-webkit-scrollbar {
+    width: 5px;
+}
+
+.item-desc-view::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 3px;
+}
+
+.item-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.item-actions > button,
+.item-actions > form {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.item-actions > button,
+.item-actions > form button {
+    width: 100%;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.item-roll-btn:disabled,
+.item-actions .btn-delete:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: transparent;
+}
+
+.item-roll-btn:disabled:hover {
+    background: transparent;
+    color: var(--online);
+    border-color: var(--online);
+}
+
+.item-delete-form {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 4px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+/* Em cards estreitos, o texto "Excluir" com o padding padrão do
+   .btn-sm precisava de mais espaço do que a coluna do grid reservava,
+   fazendo o botão vazar para a direita e ultrapassar a borda dos
+   botões "Rolar Ataque"/"Rolar Dano" acima. Reduzindo o padding, a
+   fonte e o letter-spacing (e permitindo que o botão encolha via
+   min-width: 0), o botão passa a caber sempre dentro da coluna,
+   alinhado com os demais. */
+.item-delete-form .btn-delete {
+    width: 100%;
+    min-width: 0;
+    padding: 8px 4px;
+    font-size: 0.6rem;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Card do inventário do jogador: coluna flex para que o bloco de ações
+   (rolagens + quantidade/excluir) fique sempre colado na base do card.
+   Como os cards da mesma linha do grid têm a mesma altura (stretch), a
+   linha quantidade + excluir passa a ficar exatamente no mesmo lugar em
+   todos eles, independente de imagem, descrição ou tipo do item. */
+.item-card.inv-card {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Em flex as margens não colapsam: zera a margem superior para manter o
+   mesmo espaçamento que existia com layout em bloco. */
+.item-card.inv-card .item-desc-view {
+    margin-top: 0;
+}
+
+.item-card.inv-card .item-actions {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+}
+
+/* Feedback da rolagem aparece acima da linha de excluir, para que
+   ela nunca seja empurrada quando um resultado é exibido. */
+.item-card.inv-card .item-roll-feedback {
+    order: 1;
+}
+
+.item-card.inv-card .item-delete-form {
+    order: 2;
+}
+
+.item-delete-qty {
+    width: 100%;
+    margin: 0;
+    padding: 0 6px;
+    font-size: 0.72rem;
+    text-align: center;
+}
+
+/* display:grid (em vez de flex) porque, com flex, quando o texto
+/* Dado alinhado à esquerda (largura fixa) e texto centralizado no
+   espaço restante do botão. */
+.item-roll-btn {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    border-color: var(--online);
+    color: var(--online);
+}
+
+.item-roll-btn:hover {
+    background: var(--online);
+    border-color: var(--online);
+    color: var(--bg);
+}
+
+.item-roll-feedback {
+    display: block;
+    text-align: center;
+    font-size: 0.62rem;
+    color: var(--muted);
+    min-height: 1em;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+/* Enquanto nenhuma rolagem foi feita, o span fica vazio — sem isso ele
+   ainda reservava ~1 linha de altura (e o gap do flex acima dele),
+   empurrando a margem abaixo do botão de excluir. Ele volta a aparecer
+   normalmente assim que o JS preenche o texto do resultado. */
+.item-roll-feedback:empty {
+    display: none;
+}
+
+.item-roll-feedback.is-critical {
+    color: var(--online);
+    font-weight: 700;
+}
+
+.item-roll-feedback.is-error {
+    color: #ff8079;
+}
+
+.combat-inv-card {
+    padding-top: 13px;
+}
+
+.combat-inventory-title {
+    margin-top: 32px;
+}
+
+.combat-inv-turn-hint {
+    margin-top: 8px;
+    font-size: 0.62rem;
+    color: var(--muted);
+    font-style: italic;
+}
+
+.add-item-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.add-item-form input[type="text"] {
+    flex: 2 1 160px;
+    margin-bottom: 0;
+}
+
+/* Descrição do item: caixa de texto grande, numa linha própria (largura total), que cresce ao escrever */
+.add-item-form textarea.add-item-desc {
+    flex: 1 1 100%;
+    width: 100%;
+    min-height: 96px;
+    max-height: 320px;
+    margin-bottom: 0;
+    padding: 12px 14px;
+    line-height: 1.5;
+    font-family: inherit;
+    resize: vertical;
+    field-sizing: content;   /* cresce sozinha conforme o texto (navegadores novos); nos outros, dá para arrastar o canto */
+}
+
+.add-item-form input[type="number"] {
+    flex: 0 1 80px;
+    margin-bottom: 0;
+}
+
+.add-item-form input[type="file"] {
+    flex: 1 1 160px;
+    margin-bottom: 0;
+    border: 1px dashed var(--border-strong);
+    font-size: 0.72rem;
+    padding: 10px;
+}
+
+.add-item-form select {
+    flex: 1 1 140px;
+    margin-bottom: 0;
+    padding: 11px 26px 11px 8px;
+    font-size: 0.72rem;
+    background-position: right 8px center;
+    background-size: 11px 7px;
+}
+
+.add-item-form .weapon-fields,
+.add-item-form .protection-fields,
+.add-item-form .cargo-fields,
+.add-item-form .element-fields {
+    flex: 1 1 100%;
+    gap: 12px;
+}
+
+.weapon-fields,
+.protection-fields,
+.cargo-fields,
+.element-fields {
+    display: none;
+}
+
+.weapon-fields.is-visible,
+.protection-fields.is-visible,
+.cargo-fields.is-visible,
+.element-fields.is-visible {
+    display: flex;
+}
+
+.add-item-form .weapon-fields input,
+.add-item-form .protection-fields input,
+.add-item-form .cargo-fields input,
+.add-item-form .element-fields select {
+    flex: 1 1 200px;
+    margin-bottom: 0;
+}
+
+/* Selo do elemento em itens Paranormais */
+/* Chip de elemento dos itens Paranormais: ícone à esquerda do texto. */
+.item-tag-elem {
+    display: inline-flex;
+    align-items: center;
+}
+
+.item-tag-elem .ritual-element-icon {
+    width: 1.2em;
+    height: 1.2em;
+    margin-left: 0;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+.item-tag-elem.elem-energia { color: var(--elem-energia); border-color: var(--elem-energia); }
+.item-tag-elem.elem-conhecimento { color: var(--elem-conhecimento); border-color: var(--elem-conhecimento); }
+.item-tag-elem.elem-medo { color: var(--elem-medo); border-color: var(--elem-medo); }
+.item-tag-elem.elem-morte { color: #ffffff; border-color: #ffffff; }
+.item-tag-elem.elem-sangue { color: var(--elem-sangue); border-color: var(--elem-sangue); }
+
+.add-item-form button {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+}
+
+#item-edit-form .error {
+    flex: 1 1 100%;
+    margin-bottom: 0;
+}
+
+.item-tags {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.item-tag {
+    font-size: 0.6rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+}
+
+.item-weapon-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-align: left;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    background: var(--accent-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.item-weapon-stats strong {
+    color: var(--fg);
+    margin-right: 4px;
+}
+
+/* Aviso grande de dinheiro insuficiente, confirmações e painel de ataque */
+.big-alert-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(5, 5, 5, 0.85);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+.big-alert-overlay.is-visible {
+    display: flex;
+}
+
+.big-alert-box {
+    position: relative;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 420px;
+    text-align: center;
+    background: var(--bg-raised);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-lg);
+    padding: 32px 28px;
+    box-shadow: var(--shadow-lift);
+    animation: modal-pop-in 0.18s var(--ease);
+}
+
+.big-alert-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    color: var(--muted);
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.big-alert-close svg {
+    width: 16px;
+    height: 16px;
+}
+
+.big-alert-close:hover {
+    color: var(--fg);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.big-alert-icon {
+    font-size: 2.4rem;
+    color: var(--accent);
+    line-height: 1;
+}
+
+.big-alert-message {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #ff8079;
+    letter-spacing: 0.3px;
+    line-height: 1.5;
+}
+
+.big-alert-total {
+    display: none;
+    font-size: 3.4rem;
+    font-weight: 800;
+    color: var(--online);
+    line-height: 1;
+    margin-top: 4px;
+    text-shadow: 0 0 18px rgba(90, 220, 140, 0.35);
+}
+
+/* Selo exibido quando a rolagem tira um 20 natural (crítico). Some por
+   padrão; showAlert() só o revela quando opts.critical é true. */
+.big-alert-crit-badge {
+    display: none;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--online);
+    text-transform: uppercase;
+    margin-top: -4px;
+}
+
+.big-alert-box.is-critical {
+    border-color: var(--online);
+    box-shadow: 0 0 24px rgba(90, 220, 140, 0.25), var(--shadow-lift);
+}
+
+.attack-panel-box {
+    position: relative;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    max-width: 380px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    text-align: center;
+    background: var(--bg-raised);
+    border: 1px solid var(--online);
+    border-radius: var(--radius-lg);
+    padding: 48px 28px 30px;
+    box-shadow: var(--shadow-lift);
+    animation: modal-pop-in 0.18s var(--ease);
+}
+
+.attack-panel-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    line-height: 1.5;
+    color: var(--fg);
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    width: 100%;
+}
+
+.attack-panel-choices {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+}
+
+.attack-panel-choices button {
+    flex: 1;
+    margin: 0;
+    padding: 12px 14px;
+}
+
+.attack-panel-box > .btn-delete {
+    margin: 0;
+    padding: 10px 28px;
+}
+
+/* Painel de "Aumento de Atributo" (regra geral de NEX 20/50/80/95%) */
+.attr-increase-panel[hidden] {
+    display: none;
+}
+
+.attr-increase-panel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--accent, #c62f27);
+    background: rgba(198, 47, 39, 0.08);
+}
+
+.attr-increase-panel-label {
+    font-size: 0.85rem;
+    color: var(--text, #f5f5f5);
+}
+
+.attr-increase-panel-hint {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.72rem;
+    color: var(--muted);
+}
+
+.attr-increase-panel-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.attr-increase-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.attr-increase-panel-error {
+    color: var(--danger, #e2453c);
+    font-size: 0.78rem;
+}
+
+/* Pop-up de escolha de Afinidade Elemental (a partir de 50% de NEX) */
+.affinity-panel-box {
+    max-width: 420px;
+}
+
+/* Painel de edição de ritual — mais largo que os outros pop-ups porque
+   reaproveita o mesmo formulário (com vários campos) usado para cadastro. */
+.ritual-edit-panel-box {
+    max-width: 640px;
+    text-align: left;
+    align-items: stretch;
+}
+
+.ritual-edit-panel-box .attack-panel-title {
+    text-align: center;
+}
+
+.ritual-edit-panel-box .add-ritual-form {
+    width: 100%;
+}
+
+.affinity-panel-desc {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--muted);
+}
+
+.affinity-panel-choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+}
+
+.affinity-choice-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px 10px;
+    margin-bottom: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--muted);
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.12s var(--ease), background 0.12s var(--ease);
+}
+
+.affinity-choice-btn .ritual-element-icon {
+    width: 1.6em;
+    height: 1.6em;
+    margin-left: 0;
+    fill: currentColor;
+}
+
+.affinity-choice-btn:hover {
+    transform: translateY(-2px);
+}
+
+.affinity-choice-btn.elem-energia { border-color: var(--elem-energia); color: var(--elem-energia); }
+.affinity-choice-btn.elem-energia:hover { background: rgba(165, 102, 232, 0.12); }
+
+.affinity-choice-btn.elem-conhecimento { border-color: var(--elem-conhecimento); color: var(--elem-conhecimento); }
+.affinity-choice-btn.elem-conhecimento:hover { background: rgba(230, 194, 41, 0.12); }
+
+.affinity-choice-btn.elem-morte { border-color: #ffffff; color: #ffffff; background: transparent; }
+.affinity-choice-btn.elem-morte:hover { background: rgba(255, 255, 255, 0.12); }
+
+.affinity-choice-btn.elem-sangue { border-color: var(--elem-sangue); color: var(--elem-sangue); }
+.affinity-choice-btn.elem-sangue:hover { background: rgba(226, 69, 60, 0.12); }
+
+/* Chip com a afinidade já escolhida, mostrado ao lado do NEX */
+.affinity-chip {
+    display: inline-flex;
+    align-items: center;
+}
+
+.affinity-locked-hint {
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+}
+
+/* Habilidades de Classe */
+.add-ability-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px;
+    margin-bottom: 0px;
+}
+
+.add-ability-form .inv-field {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    margin-bottom: 0;
+}
+
+.add-ability-form input,
+.add-ability-form select {
+    margin-bottom: 0;
+}
+
+.add-ability-form > input[type="text"] {
+    flex: 1 1 180px;
+}
+
+.add-ability-form > input[type="number"] {
+    flex: 0 1 100px;
+    margin-bottom: 0;
+}
+
+.add-ability-form > button {
+    flex: 0 0 auto;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.add-ability-form .ability-field-name,
+.add-ability-form .ability-field-desc {
+    flex: 1 1 180px;
+}
+
+.add-ability-form .ability-field-cost {
+    flex: 0 1 130px;
+}
+
+.add-ability-form .ability-field-element {
+    flex: 1 1 160px;
+}
+
+.add-ability-form .ability-field-cost input {
+    margin-bottom: 0;
+}
+
+.add-ability-form .ability-field-submit {
+    flex: 0 0 auto;
+}
+
+.add-ability-form button {
+    flex: 0 0 auto;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.ability-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.ability-card {
+    display: flex;
+    flex-direction: column;
+    height: 210px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-inset);
+    padding: 14px;
+    transition: border-color 0.18s var(--ease);
+}
+
+.ability-card:hover {
+    border-color: var(--border-strong);
+}
+
+.ability-card.ability-dragging {
+    opacity: 0.4;
+    border-style: dashed;
+    border-color: var(--border-strong);
+}
+
+.ability-drag-handle {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 20px;
+    color: var(--muted, #999);
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    opacity: 0.85;
+    transition: opacity 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.ability-drag-handle svg {
+    display: block;
+    pointer-events: none;
+}
+
+.ability-drag-handle:hover {
+    opacity: 1;
+    border-color: var(--border-strong);
+}
+
+.ability-drag-handle:active {
+    cursor: grabbing;
+}
+
+.ability-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+.ability-card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ability-card-title-row .ability-delete-form {
+    margin: 0 0 0 auto;
+    flex: 0 0 auto;
+}
+
+.ability-card-title-row .ability-delete-form button {
+    margin: 0;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ability-name {
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    word-break: break-word;
+}
+
+.ability-pe-cost {
+    flex: 0 0 auto;
+    font-size: 0.68rem;
+    letter-spacing: 0.5px;
+    color: #4a90d9;
+    border: 1px solid #4a90d9;
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+    white-space: nowrap;
+}
+
+.ability-kind-badge {
+    flex: 0 0 auto;
+    font-size: 0.68rem;
+    letter-spacing: 0.5px;
+    border-radius: var(--radius-sm);
+    padding: 2px 6px;
+    white-space: nowrap;
+}
+
+.ability-chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Alinha a borda do chip de elemento (ex.: "Energia") com a do chip
+   de tipo (Poder/Habilidade) ao lado, já que .ritual-element usa
+   padding/tamanho de fonte diferentes quando usado sozinho nos
+   rituais. */
+.ability-chip-group .ritual-element {
+    font-size: 0.68rem;
+    padding: 2px 6px;
+}
+
+.ability-kind-badge.kind-habilidade {
+    color: var(--online);
+    border: 1px solid var(--online);
+}
+
+.ability-kind-badge.kind-poder {
+    color: #c78a3d;
+    border: 1px solid #c78a3d;
+}
+
+.add-ability-form .ability-field-kind {
+    flex: 1 1 150px;
+}
+
+.add-ability-form .ability-kind-select {
+    flex: 0 1 150px;
+}
+
+.ability-desc {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+    white-space: pre-line;
+}
+
+.ability-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.ability-card-actions form {
+    margin: 0;
+}
+
+.ability-card-actions .ability-use-form {
+    flex: 1 1 auto;
+}
+
+.ability-card-actions button {
+    margin-bottom: 0;
+    margin-top: 0;
+    box-sizing: border-box;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ability-card-actions .ability-use-form button {
+    width: 100%;
+}
+
+.ability-card-actions .btn-increase {
+    background: transparent;
+    border-color: var(--online);
+    color: var(--online);
+}
+
+.ability-card-actions .btn-increase:hover {
+    background: var(--online);
+    border-color: var(--online);
+    color: var(--bg);
+}
+
+.add-ability-form {
+    margin-bottom: 0px;
+}
+
+.add-ability-form textarea {
+    height: 0px;
+    resize: vertical;
+    text-align: left;
+    margin-bottom: 0px;
+}
+
+/* Rituais */
+.ritual-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+/* Cada elemento define sua própria cor de destaque (--ritual-accent),
+   usada no brilho de hover e na moldura do símbolo — dá identidade
+   visual imediata ao ritual sem precisar ler o badge. */
+.ritual-card {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-inset);
+    padding: 22px 20px 34px;
+    box-shadow: var(--shadow-card);
+    transition: transform 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.ritual-card.elem-energia { --ritual-accent: var(--elem-energia); }
+.ritual-card.elem-conhecimento { --ritual-accent: var(--elem-conhecimento); }
+.ritual-card.elem-medo { --ritual-accent: var(--elem-medo); }
+.ritual-card.elem-morte { --ritual-accent: var(--border-strong); }
+.ritual-card.elem-sangue { --ritual-accent: var(--elem-sangue); }
+
+.ritual-card:hover {
+    border-color: color-mix(in srgb, var(--ritual-accent, var(--border-strong)) 65%, var(--border));
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+}
+
+.ritual-card.ritual-dragging {
+    opacity: 0.4;
+    border-style: dashed;
+    border-color: var(--border-strong);
+    transform: none;
+    box-shadow: none;
+}
+
+.ritual-drag-handle {
+    position: absolute;
+    right: 10px;
+    bottom: 8px;
+    z-index: 2;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 20px;
+    color: var(--muted, #999);
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    opacity: 0.85;
+    transition: opacity 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.ritual-drag-handle svg {
+    display: block;
+    pointer-events: none;
+}
+
+.ritual-drag-handle:hover {
+    opacity: 1;
+    border-color: var(--border-strong);
+}
+
+.ritual-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Botão de editar ritual — mesmo tamanho do botão de mover (drag
+   handle), posicionado imediatamente à esquerda dele. */
+.ritual-edit-btn {
+    position: absolute;
+    right: 38px;
+    bottom: 8px;
+    z-index: 2;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 20px;
+    color: var(--muted, #999);
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    user-select: none;
+    opacity: 0.85;
+    transition: opacity 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.ritual-edit-btn svg {
+    display: block;
+    pointer-events: none;
+}
+
+.ritual-edit-btn:hover {
+    opacity: 1;
+    border-color: var(--border-strong);
+}
+
+.ritual-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ritual-card-header form {
+    margin-left: auto;
+}
+
+.ritual-card-header button {
+    margin-bottom: 0;
+}
+
+/* Grupo "Usar Ritual" + "Excluir", encostado à direita do cabeçalho do
+   card — libera o corpo do card só para a descrição do ritual. */
+.ritual-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.ritual-card-actions form {
+    margin: 0;
+}
+
+.ritual-card-actions button {
+    margin-top: 0;
+    margin-bottom: 0;
+    box-sizing: border-box;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ritual-name {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* Miniatura do símbolo do ritual, exibida à esquerda do nome no
+   cabeçalho do card — usa a cor de destaque do elemento na borda. */
+.ritual-symbol-mini {
+    width: 28px;
+    height: 28px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--ritual-accent, var(--border-strong));
+    flex-shrink: 0;
+    position: relative;
+    top: 3px;
+}
+
+.ritual-card-actions .btn-increase {
+    background: transparent;
+    border-color: var(--online);
+    color: var(--online);
+}
+
+.ritual-card-actions .btn-increase:hover {
+    background: var(--online);
+    border-color: var(--online);
+    color: var(--bg);
+}
+
+.ritual-element {
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid var(--muted);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    padding: 0 9px;
+    height: 22px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Ícone do elemento, desenhado à direita do texto no mesmo chip —
+   dimensionado em em para nunca exceder a altura já definida pelo
+   padding/line-height do chip, e usa currentColor para herdar
+   automaticamente a cor do elemento. */
+.ritual-element-icon {
+    width: 1em;
+    height: 1em;
+    margin-left: 5px;
+    vertical-align: -0.25em;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+.ritual-element.elem-energia {
+    border-color: var(--elem-energia);
+    color: var(--elem-energia);
+}
+
+.ritual-element.elem-conhecimento {
+    border-color: var(--elem-conhecimento);
+    color: var(--elem-conhecimento);
+}
+
+.ritual-element.elem-medo {
+    border-color: var(--elem-medo);
+    color: var(--elem-medo);
+    background: #161616;
+}
+
+.ritual-element.elem-morte {
+    border-color: var(--elem-morte);
+    color: var(--elem-morte);
+    background: #e8e8e8;
+}
+
+/* Ícone do elemento Morte fica um pouco mais alto que os demais
+   ícones de elemento, que foram rebaixados. */
+.ritual-element.elem-morte .ritual-element-icon {
+    vertical-align: -0.12em;
+}
+
+.ritual-element.elem-sangue {
+    border-color: var(--elem-sangue);
+    color: var(--elem-sangue);
+}
+
+.ritual-pe {
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    color: var(--fg);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 0 9px;
+    height: 22px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.ritual-circle {
+    font-weight: 700;
+}
+
+/* Dentro do cabeçalho do ritual, o chip de custo em PE (mesma classe
+   usada nos chips de habilidade) recebe a mesma altura do chip de
+   elemento, para que a borda de todos os chips fique alinhada. */
+.ritual-card-header .ability-pe-cost {
+    height: 22px;
+    box-sizing: border-box;
+    padding-top: 0;
+    padding-bottom: 0;
+    display: inline-flex;
+    align-items: center;
+    /* o número e o rótulo (PE/PD) são itens separados do flex: sem isso
+       ficariam colados ("3PE"). */
+    gap: 0.3em;
+}
+
+.ritual-pe-cost {
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+}
+
+/* Custo em PE da versão "verdadeira" do ritual — mais cara/poderosa que a
+   versão "discente" — recebe a cor de destaque para se diferenciar dela
+   dentro do mesmo chip .ritual-pe. */
+.ritual-pe-cost-verdadeira {
+    color: var(--online);
+    font-weight: 700;
+}
+
+/* Custo em PE "normal": um terceiro custo, independente das versões
+   discente/verdadeira, usado por rituais que não seguem essa divisão. */
+.ritual-pe-cost-normal {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.ritual-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 8px;
+    font-size: 0.72rem;
+    margin-bottom: 10px;
+}
+
+.ritual-meta-grid > div {
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.ritual-meta-label {
+    display: block;
+    font-size: 0.6rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 3px;
+}
+
+.ritual-version-select {
+    font-family: inherit;
+    font-size: 0.72rem;
+    padding: 2px 18px 2px 6px;
+    width: auto;
+    max-width: fit-content;
+    margin-bottom: 0;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+        linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 9px) center, calc(100% - 5px) center;
+    background-size: 4px 4px, 4px 4px;
+    background-repeat: no-repeat;
+}
+
+.ritual-version-select:hover,
+.ritual-version-select:focus {
+    color: var(--fg);
+    border-color: var(--accent);
+    outline: none;
+}
+
+.ritual-effect {
+    font-size: 0.8rem;
+    line-height: 1.6;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    border-top: 1px dashed var(--border);
+}
+
+
+
+.add-ritual-form textarea {
+    min-height: 70px;
+    resize: vertical;
+}
+
+.add-ritual-form input[type="file"] {
+    border: 1px dashed var(--border-strong);
+    font-size: 0.72rem;
+    padding: 10px;
+}
+
+.add-ritual-form button {
+    width: auto;
+}
+
+/* 10. Editor de imagem (caixa de corte retangular) ---------------------- */
+
+.pe-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 5, 5, 0.85);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    /* Acima dos painéis de edição (z-index 1000), como o de Editar Criatura,
+       para o editor de imagem abrir por cima deles. */
+    z-index: 1100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.pe-box {
+    position: relative;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lift);
+    padding: 24px;
+    max-width: 480px;
+    width: 100%;
+    animation: modal-pop-in 0.18s var(--ease);
+}
+
+.pe-title {
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.pe-hint {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 18px;
+}
+
+.pe-canvas-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #111;
+    overflow: hidden;
+}
+
+.pe-stage {
+    position: relative;
+    width: 420px;
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background: #111;
+    touch-action: none;
+    user-select: none;
+}
+
+.pe-stage-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    user-select: none;
+}
+
+.pe-crop-box {
+    position: absolute;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62);
+    border: 2px solid var(--fg);
+    cursor: move;
+    touch-action: none;
+}
+
+.pe-crop-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.35) 1px, transparent 1px),
+        linear-gradient(to right, rgba(255, 255, 255, 0.35) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.35) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.35) 1px, transparent 1px);
+    background-position: 33.33% 0, 66.66% 0, 0 33.33%, 0 66.66%;
+    background-size: 1px 100%, 1px 100%, 100% 1px, 100% 1px;
+    background-repeat: no-repeat;
+}
+
+.pe-crop-handle {
+    position: absolute;
+    background: var(--accent);
+    border: 1px solid var(--fg);
+    border-radius: 2px;
+    touch-action: none;
+}
+
+/* Cantos: redimensionam largura e altura ao mesmo tempo. */
+.pe-h-nw, .pe-h-ne, .pe-h-sw, .pe-h-se {
+    width: 16px;
+    height: 16px;
+}
+
+.pe-h-nw { top: -9px; left: -9px; cursor: nwse-resize; }
+.pe-h-se { bottom: -9px; right: -9px; cursor: nwse-resize; }
+.pe-h-ne { top: -9px; right: -9px; cursor: nesw-resize; }
+.pe-h-sw { bottom: -9px; left: -9px; cursor: nesw-resize; }
+
+/* Bordas: redimensionam só naquela direção. */
+.pe-h-n, .pe-h-s {
+    left: 50%;
+    width: 32px;
+    height: 10px;
+    margin-left: -16px;
+    cursor: ns-resize;
+}
+
+.pe-h-n { top: -6px; }
+.pe-h-s { bottom: -6px; }
+
+.pe-h-e, .pe-h-w {
+    top: 50%;
+    width: 10px;
+    height: 32px;
+    margin-top: -16px;
+    cursor: ew-resize;
+}
+
+.pe-h-w { left: -6px; }
+.pe-h-e { right: -6px; }
+
+.pe-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.pe-controls label {
+    flex: 1 1 180px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.7rem;
+}
+
+.pe-controls input[type="range"] {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.pe-controls .pe-reset {
+    margin-bottom: 0;
+}
+
+.pe-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.pe-actions button {
+    margin-bottom: 0;
+}
+
+/* 11. Aba Chat -------------------------------------------------------- */
+
+.chat-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.chat-clear-btn {
+    margin-bottom: 0;
+}
+
+.chat-log {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 480px;
+    overflow-y: auto;
+    padding: 18px;
+    margin-bottom: 20px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+}
+
+.chat-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-left: 3px solid color-mix(in srgb, var(--msg-color, var(--accent)) 65%, var(--border));
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--msg-color, var(--accent)) 10%, var(--bg-inset));
+}
+
+.chat-message.chat-roll {
+    border-color: color-mix(in srgb, var(--msg-color, var(--accent)) 70%, var(--border-strong));
+    background: color-mix(in srgb, var(--msg-color, var(--accent)) 18%, var(--bg-inset));
+}
+
+.chat-message.chat-ritual {
+    border-color: color-mix(in srgb, var(--msg-color, var(--accent)) 70%, var(--border-strong));
+    background: color-mix(in srgb, var(--msg-color, var(--accent)) 22%, var(--bg-inset));
+}
+
+/* Morte: só a borda fica branca, fundo igual ao do chat (transparente),
+   pra não tampar o conteúdo por trás. */
+.chat-message.chat-ritual[data-ritual-element="morte"] {
+    background: transparent;
+    border-color: #f5f5f5;
+}
+
+.chat-message.chat-ritual[data-ritual-element="morte"] .chat-content {
+    color: #f5f5f5;
+}
+
+.chat-avatar {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid color-mix(in srgb, var(--msg-color, var(--accent)) 70%, var(--border-strong));
+    background: var(--bg-inset);
+}
+
+.chat-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: bold;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: var(--fg);
+}
+
+.chat-message-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-message-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 0.72rem;
+}
+
+.chat-username {
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.chat-character {
+    color: var(--muted);
+    font-style: italic;
+}
+
+.chat-timestamp {
+    color: var(--muted);
+    margin-left: auto;
+}
+
+.chat-msg-delete {
+    padding: 4px 9px;
+    font-size: 0.6rem;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.chat-content {
+    font-size: 0.9rem;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.chat-roll .chat-content {
+    color: var(--msg-color, var(--accent));
+    font-weight: bold;
+}
+
+.chat-ritual .chat-content {
+    color: var(--msg-color, var(--accent));
+    font-weight: bold;
+}
+
+.chat-roll-total {
+    font-size: 1.1em;
+    font-weight: 900;
+    color: var(--fg);
+}
+
+.chat-roll-highlight {
+    color: #ffcf4d;
+    font-weight: 900;
+}
+
+.chat-roll-icon {
+    width: 15px;
+    height: 15px;
+    margin-right: 6px;
+    vertical-align: -2px;
+    flex-shrink: 0;
+}
+
+.ritual-chat-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+    vertical-align: -3px;
+    flex-shrink: 0;
+    fill: currentColor;
+}
+
+.chat-send-wrap {
+    position: relative;
+}
+
+.chat-cmd-menu[hidden] {
+    display: none;
+}
+
+.chat-cmd-menu {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    z-index: 20;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.chat-cmd-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.chat-cmd-item:hover,
+.chat-cmd-item:focus {
+    background: var(--accent-soft);
+    color: var(--accent);
+    outline: none;
+}
+
+.chat-send-form {
+    display: flex;
+    gap: 12px;
+}
+
+.chat-send-form input {
+    margin-bottom: 0;
+    flex: 1;
+}
+
+.chat-send-form button {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+/* Chat embutido na aba Combate: versão compacta, menor que a antiga aba. */
+.chat-log.chat-log-compact {
+    gap: 6px;
+    padding: 10px;
+    max-height: 220px;
+    margin-bottom: 10px;
+}
+
+.chat-log-compact .chat-message {
+    gap: 8px;
+    padding: 6px 10px;
+}
+
+.chat-log-compact .chat-avatar {
+    width: 26px;
+    height: 26px;
+}
+
+.chat-log-compact .chat-message-header {
+    gap: 6px;
+    margin-bottom: 3px;
+    font-size: 0.68rem;
+}
+
+.combat-chat-section .chat-send-form {
+    gap: 8px;
+}
+
+.combat-chat-section {
+    margin-bottom: 20px;
+}
+
+/* Corpo retrátil do chat: aberto, deixa o menu de comandos (/d20...) poder
+   sair para fora da caixa em vez de ser cortado pelo overflow da animação. */
+.combat-chat-body:not(.is-collapsed) {
+    overflow: visible;
+}
+
+.chat-clear-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+@media (max-width: 520px) {
+    .chat-log.chat-log-compact {
+        max-height: 200px;
+    }
+}
+
+/* 12. Aba Log (admin) -------------------------------------------------- */
+
+.log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.log-entry {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--bg-inset);
+}
+
+.log-entry-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 0.72rem;
+}
+
+.log-entry-user {
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.log-entry-character {
+    color: var(--muted);
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.log-entry-action {
+    font-size: 0.82rem;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+/* 13. Responsivo ---------------------------------------------------------- */
+
+@media (max-width: 880px) {
+    /* Com tudo que vem depois do nome/atributo agrupado num único bloco
+       (.skill-actions), a grade de 2 colunas ainda aperta demais numa
+       faixa de tablet/notebook menor (entre o antigo ponto de quebra de
+       520px e a largura mínima real da grade, ~750px). Empilhando em
+       coluna única bem antes disso evita que os botões de rolagem/nível
+       fiquem espremidos ou vazem da tela. */
+    .skill-row {
+        grid-template-columns: 1fr;
+        justify-items: stretch;
+    }
+
+    .skill-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+    }
+
+    .skill-levels {
+        grid-template-columns: repeat(3, 1fr);
+        width: 100%;
+    }
+
+    .skill-bonus-input {
+        flex: 1 1 auto;
+        width: auto;
+    }
+
+    .skill-roll-btn {
+        flex: 1 1 auto;
+    }
+
+    .skill-roll-btn {
+        flex: 1 1 auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .container {
+        padding: 32px 16px 70px;
+    }
+
+    .container-wide {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .skill-row {
+        padding: 14px 16px;
+    }
+
+    .user-card, .create-user {
+        padding: 18px;
+    }
+
+    .campaign-banner {
+        height: 220px;
+    }
+
+    .campaign-hero-card {
+        margin: -40px 8px 0;
+        padding: 14px 16px 18px;
+    }
+}
+
+@media (max-width: 520px) {
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+
+    header a {
+        padding: 10px 18px;
+    }
+
+    /* Celular: grade de 2 colunas iguais, sem nunca estourar a tela. */
+    .tab-nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tab-link {
+        letter-spacing: 1px;
+    }
+
+    .character-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .pe-box {
+        padding: 16px;
+    }
+
+    .chat-timestamp {
+        margin-left: 0;
+    }
+
+    .chat-log {
+        max-height: 360px;
+    }
+
+    .add-ability-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .add-ability-form button {
+        width: 100%;
+    }
+
+    .user-summary-stats {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Aviso de erro quando uma imagem cadastrada não é encontrada no
+   servidor (upload perdido/corrompido). Reaproveita a caixa do
+   placeholder normal de cada tipo de imagem, mas com o aviso em
+   vermelho no lugar do ícone/texto padrão. */
+.item-img-placeholder.img-load-error,
+.avatar-placeholder.img-load-error,
+.avatar-placeholder-sm.img-load-error,
+.agent-avatar-placeholder.img-load-error,
+.campaign-banner-placeholder.img-load-error {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.62rem;
+    line-height: 1.35;
+    letter-spacing: 0.3px;
+    text-transform: none;
+}
+
+
+/* ---- Cabeçalho do personagem: caixas e chips alinhados ----
+   Linha de cima (cor + título) e chips (origem, patente, classe,
+   trilha) usam a MESMA grade de 2 colunas e a mesma altura (30px),
+   então as bordas ficam alinhadas verticalmente. */
+.character-hero-info {
+    --hero-ctrl-h: 28px;
+    --hero-grid-max: 700px;
+    gap: 4px;
+}
+
+/* Desktop: a coluna de informações tem a mesma altura da foto, e a última
+   linha de caixas termina exatamente na borda de baixo da foto. */
+@media (min-width: 821px) {
+    .character-hero-info {
+        align-self: stretch;
+        justify-content: space-between;
+    }
+}
+
+.character-hero-info .character-customize-row,
+.character-hero-info .character-chip-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    justify-content: stretch;
+    align-items: end;
+    gap: 8px 12px;
+    width: 100%;
+    max-width: var(--hero-grid-max);
+    margin-top: 4px;
+}
+
+.character-hero-info .character-customize-row {
+    align-items: center;
+}
+
+.character-hero-info .character-chip-grid {
+    margin-top: 4px;
+}
+
+/* Cor ocupa as 2 primeiras colunas, título as 2 últimas */
+.character-hero-info .color-picker-form,
+.character-hero-info .title-picker-form {
+    grid-column: span 2;
+}
+
+/* Linha 1: cor (coluna 1) e título (coluna 2) */
+.character-hero-info .color-picker-form,
+.character-hero-info .title-picker-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+}
+
+.character-hero-info .color-picker-form input[type="color"],
+.character-hero-info .title-picker-form input[type="color"] {
+    flex: 0 0 var(--hero-ctrl-h);
+    width: var(--hero-ctrl-h);
+    height: var(--hero-ctrl-h);
+    padding: 3px;
+    margin: 0;
+}
+
+.character-hero-info .color-picker-form button,
+.character-hero-info .title-picker-form button {
+    flex: 0 0 auto;
+    width: auto;
+    height: var(--hero-ctrl-h);
+    margin: 0;
+    padding: 0 10px;
+    font-size: 0.62rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.character-hero-info .color-picker-form button {
+    flex: 1 1 auto;
+}
+
+.character-hero-info .title-picker-form input[type="text"] {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    height: var(--hero-ctrl-h);
+    margin: 0;
+    padding: 0 8px;
+    font-size: 0.66rem;
+}
+
+/* Estado do agente: à esquerda da caixa de título (2 colunas cada) */
+
+/* Linha 2 e 3: chips (label em cima, caixa embaixo, largura da coluna) */
+.character-hero-info .character-chip-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.character-hero-info .character-chip-field form {
+    display: block;
+    width: 100%;
+    margin: 0;
+}
+
+.character-hero-info .origin-select,
+.character-hero-info .class-track-input {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: var(--hero-ctrl-h);
+    margin: 0;
+    padding: 0 22px 0 8px;
+    font-size: 0.66rem;
+    line-height: var(--hero-ctrl-h);
+    box-sizing: border-box;
+}
+
+.character-hero-info .class-track-input {
+    padding-right: 8px;
+}
+
+/* NEX: título e botão "+" alinhados no centro da linha */
+.character-header-title-row {
+    align-items: center;
+}
+
+.nex-inline .nex-form {
+    margin: 0;
+}
+
+.nex-inline .nex-increase-btn {
+    width: 24px;
+    height: 24px;
+    margin: 0;
+}
+
+/* Telas médias/estreitas: volta para 2 colunas (a foto já não fica ao lado) */
+@media (max-width: 820px) {
+    .character-hero-info .character-customize-row,
+    .character-hero-info .character-chip-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .character-hero-info .color-picker-form,
+    .character-hero-info .title-picker-form {
+        grid-column: auto;
+    }
+}
+
+/* Telas estreitas: tudo em uma coluna, caixas com a mesma largura */
+@media (max-width: 560px) {
+    .character-hero-info .character-customize-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 380px) {
+    .character-hero-info .character-chip-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Tipo do inimigo (Monstro / Criatura / Inimigo comum) no card do combate */
+.combat-type-badge {
+    display: inline-block;
+    margin: 4px 0 2px;
+    padding: 2px 9px;
+    font-size: 0.6rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+}
+
+.combat-type-monstro {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.combat-type-criatura {
+    border-color: var(--border-strong);
+    color: var(--fg);
+}
+
+.combat-add-box .npc-add-form select,
+.combat-edit-panel-box .npc-add-form select {
+    width: 100%;
+    flex: none;
+}
+
+/* Botões "Rituais" / "Inventário" no card do agente (só o mestre vê) —
+   um embaixo do outro, ocupando a largura toda do card. */
+.combat-agent-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.combat-agent-actions .combat-rituals-btn {
+    width: 100%;
+    min-width: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.combat-rituals-btn {
+    margin-top: 10px;
+}
+
+/* Painel com a lista de rituais do agente, aberto pelo mestre no combate */
+.combat-rituals-panel-box {
+    max-width: 460px;
+}
+
+.combat-rituals-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-height: 55vh;
+    overflow-y: auto;
+}
+
+.combat-ritual-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.combat-ritual-info {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    text-align: left;
+}
+
+.combat-ritual-name {
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+}
+
+.combat-ritual-meta {
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+/* Miniatura do item na lista de inventário do painel de combate (mestre) */
+.combat-inv-thumb {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    max-width: none;
+    max-height: none;
+    object-fit: cover;
+    aspect-ratio: auto;
+    cursor: default;
+    margin: 0;
+    font-size: 1rem;
+    position: static;
+    top: auto;
+}
+
+/* No painel de rituais o botão de editar fica na linha, não no canto do card */
+.combat-ritual-edit-btn {
+    position: static;
+    flex: 0 0 auto;
+}
+
+/* Campo "Bônus de iniciativa" com rótulo sempre visível */
+.combat-bonus-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+}
+
+.combat-bonus-label {
+    font-size: 0.64rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.combat-bonus-hint {
+    font-size: 0.66rem;
+    line-height: 1.3;
+    color: var(--muted);
+}
+
+.combat-form-row-end {
+    align-items: flex-end;
+}
+
+/* Sistema de turnos */
+.combat-turn-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+/* Sem as margens verticais padrão dos botões dentro das barras do combate */
+.combat-turn-controls button,
+.combat-toolbar-row button {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.combat-turn-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 18px;
+    margin: 16px 0;
+    padding: 12px 16px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+}
+
+.combat-turn-round {
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.combat-turn-who {
+    font-size: 1rem;
+}
+
+.combat-turn-waiting {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: var(--muted);
+}
+
+.combat-banner-end-turn-btn {
+    margin-left: auto;
+}
+
+.combat-card-current {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 18px var(--accent-soft);
+}
+
+.combat-current-tag {
+    margin-top: 10px;
+    font-size: 0.62rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.combat-end-turn-btn {
+    margin-top: 8px;
+}
+
+
+/* Estado do agente */
+.npc-state-badge[hidden] {
+    display: none;
+}
+
+.agent-state-form {
+    margin: 0;
+}
+
+/* Telas médias: cor e título ocupam a linha inteira (em duas colunas o
+   campo de título ficava espremido demais para digitar) */
+
+/* Cor do agente: logo abaixo da foto de perfil */
+.character-hero-avatar {
+    --hero-ctrl-h: 28px;
+}
+
+.character-hero-avatar .color-picker-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    margin: 0;
+}
+
+.character-hero-avatar .color-picker-form input[type="color"] {
+    flex: 0 0 var(--hero-ctrl-h);
+    width: var(--hero-ctrl-h);
+    height: var(--hero-ctrl-h);
+    padding: 3px;
+    margin: 0;
+}
+
+.character-hero-avatar .color-picker-form button {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    height: var(--hero-ctrl-h);
+    margin: 0;
+    padding: 0 8px;
+    font-size: 0.62rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+
+/* ==== Cabeçalho do personagem: linha de ações alinhada à grade dos chips ====
+   Estado e Título ocupam 2 colunas cada; dentro deles, campo + botão
+   dividem o espaço em duas metades iguais, então cada controle cai
+   exatamente sobre uma coluna de Origem / Patente / Classe / Trilha. */
+.character-hero-info .character-customize-row {
+    margin-top: 10px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+
+.character-hero-info .state-picker-form,
+.character-hero-info .title-picker-form {
+    grid-column: span 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+}
+
+.state-select-wrap {
+    position: relative;
+    min-width: 0;
+}
+
+.state-select-wrap .npc-state-dot {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.character-hero-info .state-picker-form select {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: var(--hero-ctrl-h);
+    margin: 0;
+    padding: 0 30px 0 30px;
+    font-size: 0.66rem;
+    line-height: var(--hero-ctrl-h);
+    box-sizing: border-box;
+}
+
+.character-hero-info .title-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.character-hero-info .title-field input[type="color"] {
+    flex: 0 0 var(--hero-ctrl-h);
+    width: var(--hero-ctrl-h);
+    height: var(--hero-ctrl-h);
+    padding: 3px;
+    margin: 0;
+}
+
+.character-hero-info .title-field input[type="text"] {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    height: var(--hero-ctrl-h);
+    margin: 0;
+    padding: 0 8px;
+    font-size: 0.66rem;
+}
+
+.character-hero-info .state-picker-form button,
+.character-hero-info .title-picker-form button {
+    width: 100%;
+    height: var(--hero-ctrl-h);
+    margin: 0;
+    padding: 0 8px;
+    font-size: 0.62rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+/* Telas médias: cada ação ocupa a linha toda (2 metades iguais, alinhadas
+   com as 2 colunas dos chips logo abaixo). */
+@media (max-width: 820px) {
+    .character-hero-info .state-picker-form,
+    .character-hero-info .title-picker-form {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Telas estreitas: campo à esquerda e botão compacto à direita. */
+@media (max-width: 560px) {
+    .character-hero-info .state-picker-form,
+    .character-hero-info .title-picker-form {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+    }
+
+    .character-hero-info .state-picker-form button,
+    .character-hero-info .title-picker-form button {
+        width: auto;
+        padding: 0 14px;
+    }
+}
+
+.character-hero-info .character-customize-row + .character-chip-grid {
+    margin-top: 12px;
+}
+
+
+/* Seletor de jogador na aba de perícias (visível só para o admin) */
+.skill-player-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px;
+}
+
+.skill-player-picker label {
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.skill-player-picker select {
+    width: auto;
+    min-width: 220px;
+    max-width: 100%;
+    margin: 0;
+    font-size: 0.8rem;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+/* Perícias de outro jogador (admin): campos de edição travados */
+.skill-level-btn:disabled,
+.skill-bonus-input[readonly],
+.skill-custom-name[readonly] {
+    cursor: default;
+}
+
+.skill-level-btn:disabled:not(.active),
+.skill-level-btn:disabled:not(.active):hover {
+    background: var(--bg-inset);
+    border-color: var(--border-strong);
+    color: var(--muted);
+}
+
+
+/* Origem da rolagem no chat: jogador x mestre rolando pelo jogador */
+.chat-roll-origin {
+    font-size: 0.58rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 1px 6px;
+    white-space: nowrap;
+}
+
+.chat-roll-origin-admin {
+    color: var(--fg);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 30%, var(--bg-raised));
+}
+
+
+/* Formulário "Adicionar Habilidade": Tipo, Nome, Custo (PE) e Elemento na
+   primeira linha; Descrição ocupa a linha inteira logo abaixo, com área
+   de escrita maior. */
+.add-ability-form .ability-field-cost {
+    flex: 0 1 130px;
+}
+
+.add-ability-form .ability-field-desc {
+    flex: 1 1 100%;
+}
+
+.add-ability-form .ability-field-desc textarea {
+    width: 100%;
+    height: auto;
+    min-height: 130px;
+    resize: vertical;
+    text-align: left;
+    box-sizing: border-box;
+    font-family: inherit;
+    margin-bottom: 0;
+}
+
+.add-ability-form .ability-field-submit {
+    flex: 1 1 100%;
+}
+
+
+/* Nome do agente na aba Agentes: ícone de afinidade sempre ao lado do
+   nome, na mesma linha (sem quebrar). O texto do nome encolhe, e o script
+   da página abrevia os sobrenomes quando não couber. */
+.agent-name-fit {
+    flex-wrap: nowrap;
+    width: 100%;
+    min-width: 0;
+    gap: 8px;
+}
+
+.agent-name-fit .agent-element-icon,
+.agent-name-fit .badge {
+    flex-shrink: 0;
+}
+
+.agent-name-fit .agent-name-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+@media (min-width: 1001px) {
+    .tab-nav {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+}
+
+/* Modo "Jogar sem Sanidade" (ligado pelo mestre em Campanha): esconde a
+   Sanidade em todas as telas. Os valores continuam guardados no banco. */
+body.sem-sanidade .stat-sanidade,
+body.sem-sanidade .agent-stat-row-sanidade,
+body.sem-sanidade .field-sanidade {
+    display: none !important;
+}
+
+/* PE <-> PD: PD só aparece no modo "Jogar sem Sanidade". */
+.t-pd { display: none; }
+body.sem-sanidade .t-pd { display: inline; }
+body.sem-sanidade .t-pe { display: none; }
+
+/* PD é calculado sozinho (classe + NEX + Presença): some o campo manual. */
+.only-pd { display: none; }
+body.sem-sanidade .only-pd { display: block; }
+body.sem-sanidade .field-pe { display: none !important; }
+
+/* PD (modo "Jogar sem Sanidade"): cor azul e ícone próprio no lugar do PE. */
+:root { --pd-color: #3b9dff; }
+
+.icon-pd {
+    display: none;
+    width: 20px;
+    height: 20px;
+    color: var(--pd-color);
+    filter: drop-shadow(0 0 3px rgba(59, 157, 255, 0.5));
+}
+
+body.sem-sanidade .stat-pe .icon-pe { display: none !important; }
+body.sem-sanidade .stat-pe .icon-pd {
+    display: block !important;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    color: var(--pd-color);
+}
+
+/* Modo PD: esconde a linha "PD p/rodada" embaixo do card. */
+body.sem-sanidade .stat-pe .pe-round-limit-note { display: none; }
+
+/* Sem a barra colorida no topo do card de PD (o ícone já identifica). */
+body.sem-sanidade .stat-box.stat-pe { border-top-color: transparent; }
+body.sem-sanidade .stat-pe .stat-bar-fill { background: var(--pd-color); }
+body.sem-sanidade .pe-round-limit-note,
+body.sem-sanidade .agent-stat-label-pe { color: var(--pd-color); }
+body.sem-sanidade .ability-pe-cost {
+    color: var(--pd-color);
+    border-color: var(--pd-color);
+}
+
+/* Modo "Jogar sem Sanidade": a caixa de Sanidade some do resumo do agente
+   (painel do mestre), então a grade passa a ter 5 colunas iguais em vez de
+   deixar um espaço cinza sobrando no fim da linha. */
+body.sem-sanidade .user-summary-stats {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+/* Celular: 3 caixas na primeira linha e 2 (mais largas) na segunda,
+   preenchendo a linha inteira. A Sanidade (3ª) continua no DOM, só oculta. */
+@media (max-width: 520px) {
+    body.sem-sanidade .user-summary-stats {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    body.sem-sanidade .user-summary-stats .stat-box {
+        grid-column: span 2;
+    }
+    body.sem-sanidade .user-summary-stats .stat-box:nth-child(n+5) {
+        grid-column: span 3;
+    }
+}
+
+/* Seção "Opções" da Campanha: mesma folga inferior enxuta da última seção,
+   sem a margem extra do formulário/botão embaixo de "Salvar Opções". */
+.campanha-page .campaign-options-section {
+    padding-bottom: 22px;
+}
+
+.campanha-page .campaign-options-section form,
+.campanha-page .campaign-options-section form button:last-child {
+    margin-bottom: 0;
+}
+
+/* Seção "Opções" da Campanha: checkboxes mais próximos entre si, mantendo
+   uma folga um pouco maior antes do botão "Salvar Opções". */
+.campanha-page .campaign-options-section .lock-checkbox {
+    margin: 0 0 4px;
+}
+
+.campanha-page .campaign-options-section .lock-checkbox:last-of-type {
+    margin-bottom: 18px;
+}
+
+
+/* Pesquisa de perícias: filtra a lista ao digitar */
+.skill-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px;
+}
+
+.skill-search label {
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.skill-search input[type="search"] {
+    width: 100%;
+    max-width: 340px;
+    margin: 0;
+    font-size: 0.8rem;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.skill-search-count {
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.skill-row.skill-hidden {
+    display: none;
+}
+
+.skill-empty {
+    background: var(--bg-raised);
+    padding: 18px 20px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: center;
+}
+
+.skill-empty[hidden] {
+    display: none;
+}
+
+
+/* Ampliar foto do item ao clicar (inventário) */
+.item-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.82);
+    cursor: zoom-out;
+}
+
+.item-lightbox img {
+    max-width: min(92vw, 720px);
+    max-height: 78vh;
+    object-fit: contain;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+.item-lightbox-caption {
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--fg);
+}
+
+/* Chat fixo (_chat_dock.html), presente em todas as abas.
+   - Telas largas (>= 1500px): fica fixo no espaço vazio à esquerda da coluna
+     central de 920px, com sempre o mesmo tamanho (--chat-dock-w).
+   - Telas estreitas: não há espaço lateral, então o chip flutua no canto
+     inferior esquerdo e o chat abre como um painel sobre a página. */
+:root {
+    --chat-dock-w: min(440px, calc((100vw - 920px) / 2 - 46px));
+}
+
+.combat-chat-dock {
+    position: fixed;
+    left: 14px;
+    bottom: 14px;
+    width: min(380px, calc(100vw - 28px));
+    max-height: calc(100vh - 28px);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    z-index: 30;
+    /* A caixa em si não pode bloquear cliques na página; só o chip e o
+       corpo do chat (aberto) recebem o mouse. */
+    pointer-events: none;
+}
+
+.combat-chat-dock .combat-chat-section {
+    display: flex;
+    flex-direction: column-reverse;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-bottom: 0;
+    pointer-events: none;
+}
+
+.combat-chat-dock .combat-chat-chip {
+    flex-shrink: 0;
+    align-self: flex-start;
+    margin: 10px 0 0;
+    pointer-events: auto;
+}
+
+.combat-chat-dock .combat-chat-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.combat-chat-dock .combat-chat-body:not(.is-collapsed) {
+    pointer-events: auto;
+}
+
+.combat-chat-dock .chat-clear-row,
+.combat-chat-dock .chat-send-wrap {
+    flex-shrink: 0;
+}
+
+/* A altura do chat é limitada à tela; quem encolhe é a lista de mensagens,
+   assim a caixa de enviar nunca sai da tela. */
+.combat-chat-dock .chat-log.chat-log-compact {
+    flex: 1 1 auto;
+    min-height: 80px;
+    max-height: none;
+}
+
+@media (min-width: 1500px) {
+    .combat-chat-dock {
+        top: 14px;
+        bottom: auto;
+        left: 22px;
+        width: var(--chat-dock-w);
+        justify-content: flex-start;
+    }
+
+    .combat-chat-dock .combat-chat-section {
+        flex-direction: column;
+    }
+
+    .combat-chat-dock .combat-chat-chip {
+        margin: 0 0 10px;
+    }
+
+    /* Aba Perícias (container largo): afasta o conteúdo para não ficar
+       por baixo do chat. */
+    .container-wide {
+        padding-left: max(260px, calc(var(--chat-dock-w) + 54px));
+    }
+}
+
+/* Botão-chip do chat (substitui o menu suspenso "Mensagens"): só o ícone,
+   em formato de pílula. Aberto = preenchido com o vermelho do tema. */
+.combat-chat-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 34px;
+    margin-bottom: 10px;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--bg-raised);
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.combat-chat-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.combat-chat-chip[aria-expanded="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.combat-chat-chip-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* Bolinha de mensagens não lidas sobre o chip (chat recolhido). */
+.combat-chat-chip.has-unread::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg-raised);
+}
+
+/* Iniciativa de inimigos oculta dos jogadores (aba Combate) ------------ */
+.combat-hide-initiative {
+    margin-top: 2px;
+    font-size: 0.8rem;
+}
+
+.combat-initiative-visibility {
+    margin-top: 2px;
+    font-size: 0.72rem;
+    letter-spacing: 0.3px;
+    padding: 3px 10px;
+    color: var(--muted);
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.combat-initiative-visibility:hover {
+    color: var(--fg);
+    border-color: var(--border-strong);
+}
+
+.combat-initiative-visibility.is-hidden {
+    color: color-mix(in srgb, var(--agent-color, var(--accent)) 85%, var(--fg));
+    border-color: color-mix(in srgb, var(--agent-color, var(--accent)) 60%, var(--border));
+}
+
+.combat-initiative-secret {
+    color: var(--muted);
+    cursor: help;
+}
+
+
+/* 7c. Painel "Gerenciar Combate" (mestre): visual mais compacto ------- */
+
+/* Título de cada quadro com uma barrinha de destaque */
+.combat-add-box .section-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--fg);
+}
+
+.combat-add-box .section-subtitle::before {
+    content: "";
+    flex: 0 0 3px;
+    align-self: stretch;
+    min-height: 12px;
+    border-radius: 2px;
+    background: var(--accent);
+}
+
+/* Select + botão na mesma linha (Adicionar Agente) */
+.combat-add-box .npc-add-form.combat-form-inline {
+    flex-direction: row;
+    align-items: stretch;
+}
+
+.combat-add-box .npc-add-form.combat-form-inline select {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+}
+
+.combat-add-box .npc-add-form.combat-form-inline > button {
+    align-self: stretch;
+    min-width: 0;
+    flex: 0 0 auto;
+}
+
+/* Linhas com vários campos: todos na mesma linha, quebram só em telas
+   estreitas. */
+.combat-add-box .combat-form-row {
+    flex-wrap: wrap;
+}
+
+.combat-add-box .combat-form-row select {
+    flex: 1 1 140px;
+    width: auto;
+    min-width: 0;
+}
+
+.combat-add-box .combat-form-row > input[type="text"] {
+    flex: 2 1 160px;
+    width: auto;
+    min-width: 0;
+}
+
+/* Campos dentro de <label> (coluna): nunca crescem na vertical */
+.combat-add-box .combat-bonus-field .combat-bonus-input {
+    flex: 0 0 auto;
+    width: 100%;
+}
+
+.combat-add-box .combat-form-row > button {
+    align-self: stretch;
+}
+
+.combat-add-box .combat-type-name-row select {
+    flex: 0 1 150px;
+}
+
+/* Campos numéricos curtos (Bônus / VD) */
+.combat-add-box .combat-bonus-field.combat-vd-field {
+    flex: 0 0 84px;
+}
+
+/* Linha da iniciativa: o campo de dados ocupa o espaço que sobra */
+.combat-add-box .combat-form-row-end {
+    flex-wrap: nowrap;
+    align-items: stretch;
+}
+
+.combat-add-box .combat-form-row-end > .combat-bonus-field:not(.combat-vd-field) {
+    flex: 1 1 auto;
+}
+
+/* Avisos ("Todos os agentes já estão no combate.") mais discretos */
+.combat-empty-hint {
+    font-size: 0.78rem;
+    font-style: normal;
+    line-height: 1.4;
+    padding: 8px 12px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+}
+
+/* Checkbox "Ocultar iniciativa" alinhado e com área de clique maior */
+.combat-add-box .combat-hide-initiative {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    cursor: pointer;
+}
+
+/* Barra de ações única: turnos à esquerda; rolar iniciativas e
+   encerrar à direita. */
+.combat-actions-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.combat-actions-bar .combat-turn-controls {
+    margin: 0;
+}
+
+.combat-actions-bar .combat-toolbar-row {
+    padding-top: 0;
+    border-top: 0;
+    margin-left: auto;
+    gap: 10px;
+}
+
+@media (max-width: 520px) {
+    .combat-add-box .npc-add-form.combat-form-inline {
+        flex-wrap: wrap;
+    }
+
+    .combat-add-box .npc-add-form.combat-form-inline select {
+        flex: 1 1 100%;
+    }
+
+    .combat-add-box .npc-add-form.combat-form-inline > button,
+    .combat-add-box .combat-form-row > button {
+        flex: 1 1 100%;
+    }
+
+    .combat-add-box .combat-form-row-end {
+        flex-wrap: wrap;
+    }
+
+    .combat-actions-bar .combat-toolbar-row {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+.combat-add-box .combat-form-row:has(.perspective-upload) {
+    flex-wrap: nowrap;
+}
+
+.combat-add-box .combat-form-row .perspective-upload {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* Linha do NPC (menu + bônus + botão): sempre numa linha só em telas
+   médias/grandes */
+.combat-add-box .combat-form-row:has(select[name="npc_id"]) {
+    flex-wrap: nowrap;
+}
+
+.combat-add-box .combat-form-row:has(select[name="npc_id"]) select {
+    flex: 1 1 0;
+}
+
+.combat-add-box .combat-form-row:has(select[name="npc_id"]) > button {
+    flex: 0 0 auto;
+}
+
+@media (max-width: 520px) {
+    .combat-add-box .combat-form-row:has(select[name="npc_id"]) {
+        flex-wrap: wrap;
+    }
+
+    .combat-add-box .combat-form-row:has(select[name="npc_id"]) select {
+        flex: 1 1 100%;
+    }
+
+    .combat-add-box .combat-form-row:has(select[name="npc_id"]) .combat-vd-field {
+        flex: 1 1 0;
+    }
+
+    .combat-add-box .combat-form-row:has(select[name="npc_id"]) > button {
+        flex: 1 1 100%;
+    }
+
+    .combat-add-box .combat-type-name-row select {
+        flex: 1 1 100%;
+    }
+}
+
+/* Linha do NPC em grade: o menu encolhe, Bônus e botão mantêm o tamanho */
+.combat-add-box .combat-form-row:has(select[name="npc_id"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 84px auto;
+    align-items: stretch;
+}
+
+.combat-add-box .combat-form-row:has(select[name="npc_id"]) select {
+    width: 100%;
+}
+
+@media (max-width: 520px) {
+    .combat-add-box .combat-form-row:has(select[name="npc_id"]) {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .combat-add-box .combat-form-row:has(select[name="npc_id"]) select,
+    .combat-add-box .combat-form-row:has(select[name="npc_id"]) > button {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Barra de ações: quando não couber numa linha só, vira duas linhas
+   organizadas (turnos em cima; Rolar iniciativas à esquerda e Encerrar
+   combate à direita embaixo). */
+.combat-actions-bar {
+    container-type: inline-size;
+}
+
+@container (max-width: 1120px) {
+    .combat-actions-bar > .combat-turn-controls,
+    .combat-actions-bar > .combat-toolbar-row {
+        flex: 1 1 100%;
+    }
+
+    .combat-actions-bar > .combat-toolbar-row {
+        margin-left: 0;
+        justify-content: space-between;
+    }
+}
+
+/* Perícias de Profissão (com o campo "Qual profissão?"): os botões de
+   treino, o bônus e o rolar ficam na mesma linha — e na mesma altura —
+   da caixa de texto, em vez de centralizados entre o nome e a caixa. */
+.skill-row:has(.skill-custom-name) {
+    align-items: end;
+}
+
+.skill-row:has(.skill-custom-name) .skill-actions {
+    align-items: stretch;
+}
+
+.skill-row:has(.skill-custom-name) .skill-bonus {
+    align-items: center;
+}
+
+.skill-row:has(.skill-custom-name) .skill-custom-name,
+.skill-row:has(.skill-custom-name) .skill-level-btn,
+.skill-row:has(.skill-custom-name) .skill-bonus-input,
+.skill-row:has(.skill-custom-name) .skill-roll-btn {
+    box-sizing: border-box;
+    height: 34px;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.skill-row:has(.skill-custom-name) .skill-custom-name {
+    flex: 1 1 100%;
+}
+
+@media (max-width: 880px) {
+    .skill-row:has(.skill-custom-name) .skill-actions {
+        align-items: stretch;
+    }
+}
+
+/* Perícias de Profissão: caixa de texto mais estreita (só em telas
+   largas; no celular continua ocupando a largura toda). Os botões da
+   direita mantêm o mesmo tamanho das outras perícias para as colunas
+   ficarem alinhadas na lista. */
+@media (min-width: 881px) {
+    .skill-row:has(.skill-custom-name) .skill-custom-name {
+        flex: 0 1 230px;
+        min-width: 0;
+        max-width: 230px;
+    }
+}
+
+/* Aba Portrait: configuração e pré-visualização do portrait para o OBS */
+.portrait-step {
+    margin-bottom: 24px;
+}
+
+.portrait-step:last-child {
+    margin-bottom: 0;
+}
+
+.portrait-step-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 0.78rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--fg);
+}
+
+.portrait-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    font-size: 0.7rem;
+    color: var(--muted);
+}
+
+.portrait-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 36px;
+    margin-bottom: 16px;
+}
+
+.portrait-group-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.66rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.portrait-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* "Chip": checkbox/radio escondido e o texto vira um botão que acende ao marcar */
+.portrait-chip {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.portrait-chip input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.portrait-chip span {
+    display: inline-block;
+    padding: 9px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-inset);
+    font-size: 0.74rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--muted);
+    transition: background-color 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.portrait-chip:hover span {
+    border-color: var(--fg);
+    color: var(--fg);
+}
+
+.portrait-chip input:checked + span {
+    background: var(--fg);
+    border-color: var(--fg);
+    color: var(--bg);
+}
+
+.portrait-chip input:focus-visible + span {
+    outline: 2px solid var(--fg);
+    outline-offset: 2px;
+}
+
+.portrait-save-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin-top: 14px;
+}
+
+.portrait-save-row button {
+    box-sizing: border-box;
+    min-height: 44px;
+    margin-bottom: 0;
+}
+
+.portrait-save-row button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.portrait-save-status {
+    font-size: 0.78rem;
+    line-height: 1.4;
+    letter-spacing: 0.2px;
+    text-transform: none;
+    color: var(--muted);
+}
+
+.portrait-save-status.dirty {
+    color: var(--fg);
+}
+
+.portrait-link {
+    margin-bottom: 10px;
+    font-size: 0.82rem;
+}
+
+.portrait-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.portrait-actions button,
+.portrait-actions form {
+    margin-bottom: 0;
+}
+
+/* botões e link com a mesma altura e alinhamento */
+.portrait-actions button,
+.portrait-actions .portrait-btn {
+    box-sizing: border-box;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+/* o "Gerar novo link" fica separado dos botões principais, à direita */
+.portrait-actions form {
+    margin-left: auto;
+}
+
+.portrait-primary {
+    background: var(--fg);
+    border-color: var(--fg);
+    color: var(--bg);
+}
+
+.portrait-primary:hover {
+    background: transparent;
+    color: var(--fg);
+}
+
+/* link com a mesma aparência dos botões do site */
+.portrait-btn {
+    display: inline-block;
+    padding: 12px 22px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-inset);
+    font-size: 0.78rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--fg);
+    transition: background-color 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.portrait-btn:hover {
+    background: var(--fg);
+    border-color: var(--fg);
+    color: var(--bg);
+}
+
+.portrait-note {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    letter-spacing: 0.2px;
+    text-transform: none;
+    color: var(--muted);
+}
+
+.portrait-note b {
+    color: var(--fg);
+    font-weight: normal;
+}
+
+.portrait-note code {
+    white-space: nowrap;
+    padding: 1px 5px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--fg);
+}
+
+.portrait-stage {
+    overflow: auto;
+    width: fit-content;
+    max-width: 100%;
+    padding: 12px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    /* fundo xadrez para enxergar a transparência do portrait */
+    background-color: #1a1a1f;
+    background-image:
+        linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%),
+        linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.05) 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+}
+
+.portrait-stage iframe {
+    display: block;
+    border: 0;
+    background: transparent;
+    max-width: none;
+    transform-origin: top left;
+}
+
+/* Lista do mestre */
+.portrait-agent-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+}
+
+.portrait-agent-row .portrait-agent-name {
+    flex: 0 0 200px;
+    font-size: 0.9rem;
+}
+
+.portrait-agent-row input[type="text"] {
+    flex: 1 1 260px;
+    margin-bottom: 0;
+    font-size: 0.78rem;
+}
+
+.portrait-agent-row button,
+.portrait-agent-row form {
+    margin-bottom: 0;
+}
+
+.portrait-note + .portrait-agent-row {
+    margin-top: 14px;
+}
+
+@media (max-width: 600px) {
+    .portrait-actions form {
+        margin-left: 0;
+    }
+}
+
+
+/* ---- Perícias favoritas: estrela amarela à esquerda do nome ---- */
+.skill-fav-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    margin: 0 -2px 0 -4px;
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    color: #f5c542;               /* amarelo */
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform .15s ease, background-color .15s ease;
+}
+.skill-fav-btn .skill-fav-icon {
+    fill: none;                   /* não favorita: só o contorno amarelo */
+    opacity: .75;
+    transition: opacity .15s ease, filter .15s ease;
+}
+.skill-fav-btn .skill-fav-icon path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linejoin: round;
+}
+.skill-fav-btn:hover:not(:disabled) { background: rgba(245, 197, 66, .14); transform: scale(1.12); }
+.skill-fav-btn:hover:not(:disabled) .skill-fav-icon { opacity: 1; }
+.skill-fav-btn:focus-visible { outline: 2px solid #f5c542; outline-offset: 2px; }
+.skill-fav-btn.active .skill-fav-icon { opacity: 1; filter: drop-shadow(0 0 5px rgba(245, 197, 66, .55)); }
+.skill-fav-btn.active .skill-fav-icon path { fill: currentColor; }
+.skill-fav-btn:disabled { cursor: default; }   /* mestre vendo outro agente: só mostra */
+
+.skill-row.is-fav { box-shadow: inset 3px 0 0 #f5c542; }
+.skill-row.skill-moved { animation: skill-moved-flash .9s ease; }
+@keyframes skill-moved-flash {
+    0%   { background-color: rgba(245, 197, 66, .22); }
+    100% { background-color: var(--bg-raised); }
+}

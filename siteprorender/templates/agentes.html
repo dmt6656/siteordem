@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Agentes — Ordem Paranormal</title>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}?v={{ asset_version('favicon.svg') }}">
+        <link rel="alternate icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}?v={{ asset_version('favicon.png') }}">
+        <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}?v={{ asset_version('favicon.png') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version('style.css') }}">
+        <script src="{{ url_for('static', filename='notify.js') }}?v={{ asset_version('notify.js') }}"></script>
+    </head>
+    <body class="{{ 'sem-sanidade' if sem_sanidade else '' }}">
+        <div class="container">
+            <header>
+                <h1>Agentes</h1>
+                <div class="header-actions">
+                    {% if session.get('is_admin') %}<a href="{{ url_for('admin_log') }}"{{ ' class="active"'|safe if request.endpoint == 'admin_log' }}>Log</a>{% endif %}
+                    <a href="{{ url_for('logout') }}">Sair</a>
+                </div>
+            </header>
+
+            <nav class="tab-nav">
+                <a href="{{ url_for('admin_panel') if session.get('is_admin') else url_for('player_panel') }}" class="tab-link">Painel</a>
+                <a href="{{ url_for('pericias_panel') }}" class="tab-link">Perícias</a>
+                <a href="{{ url_for('combate_panel') }}" class="tab-link" id="nav-chat-link">Combate<span class="tab-unread-dot" id="nav-chat-unread"></span></a>
+                <a href="{{ url_for('agentes_panel') }}" class="tab-link active">Agentes</a>
+                <a href="{{ url_for('campanha_panel') }}" class="tab-link">Campanha</a>
+                <a href="{{ url_for('mural_panel') }}" class="tab-link">Mural</a>
+                <a href="{{ url_for('anotacoes_panel') }}" class="tab-link">Anotações</a>
+                <a href="{{ url_for('portrait_panel') }}" class="tab-link">Portrait</a>
+            </nav>
+
+            <div class="section-title">Agentes cadastrados</div>
+
+            <div class="agent-grid">
+                {% for u in users %}
+                    <div class="agent-card" data-user-id="{{ u['id'] }}" style="--agent-color: {{ u['color'] or '#c62f27' }};">
+                        {% if session.get('is_admin') or u['id'] == session['user_id'] %}
+                            <button type="button" class="agent-status-dot {{ 'online' if u['is_online'] else 'offline' }}" id="dot-{{ u['id'] }}"
+                                title="{{ 'Online' if u['is_online'] else 'Offline' }} — clique para alternar"
+                                data-self="{{ 'true' if u['id'] == session['user_id'] else 'false' }}"
+                                onclick="toggleOnline({{ u['id'] }}, {{ 'false' if u['is_online'] else 'true' }}, {{ 'true' if u['id'] == session['user_id'] else 'false' }})"></button>
+                        {% else %}
+                            <div class="agent-status-dot {{ 'online' if u['is_online'] else 'offline' }}" id="dot-{{ u['id'] }}" title="{{ 'Online' if u['is_online'] else 'Offline' }}"></div>
+                        {% endif %}
+
+                        {% set elem_color = element_colors.get(u['character_element_affinity']) if u['character_element_affinity'] and (u['character_nex'] or 0) >= element_affinity_nex_threshold else None %}
+                        {% if u['avatar'] %}
+                            <img class="agent-avatar agent-avatar-clickable" src="{{ url_for('static', filename='avatar_images/' + u['avatar']) }}" alt="Imagem de {{ display_name(u) }}" onerror="return imgFallback(this, 'agent-avatar')" data-lightbox-src="{{ url_for('static', filename='avatar_images/' + u['avatar']) }}" data-lightbox-name="{{ display_name(u) }}">
+                        {% else %}
+                            <div class="agent-avatar-placeholder">?</div>
+                        {% endif %}
+
+                        {% set agent_full_name = display_name(u) if u['is_admin'] else (u['character_name'] or u['username']) %}
+                        <div class="agent-name agent-name-fit">
+                            <span class="agent-name-text" data-full-name="{{ agent_full_name }}">{{ agent_full_name }}</span>
+                            {% if elem_color %}
+                                <svg class="agent-element-icon" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" style="color: {{ elem_color }};" aria-label="Afinidade com {{ u['character_element_affinity'] }}"><title>Afinidade com {{ u['character_element_affinity'] }}</title>{{ element_icons.get(u['character_element_affinity']|lower, '') | safe }}</svg>
+                            {% endif %}
+                            {% if u['is_admin'] %}<span class="badge">ADMIN</span>{% endif %}
+                        </div>
+                        {% if not u['is_admin'] and u['character_title'] %}
+                            <div class="agent-title" style="color: {{ u['character_title_color'] or '#f5f5f5' }};">
+                                "{{ u['character_title'] }}"
+                            </div>
+                        {% endif %}
+                        {% if u['is_admin'] %}
+                            <div class="agent-top-secret" data-scramble-text="[TOP SECRET]" aria-label="[TOP SECRET]"></div>
+                        {% endif %}
+                        {% if not u['is_admin'] %}
+                            {% if u['character_name'] %}
+                                <div class="agent-username">NEX : {{ u['character_nex'] or 0 }}%</div>
+                            {% endif %}
+                            <div class="npc-state-badge agent-state-badge{{ ' npc-state-badge-morto' if u['state'] == 'Morto' }}" id="state-{{ u['id'] }}" style="--state-color: {{ npc_state_colors.get(u['state'], '#7a7a7a') }};">
+                                {% if npc_state_icons.get(u['state']) %}
+                                    <span class="npc-state-icon" id="state-icon-{{ u['id'] }}">{{ npc_state_icons[u['state']] }}</span>
+                                {% else %}
+                                    <span class="npc-state-icon" id="state-icon-{{ u['id'] }}" hidden></span>
+                                {% endif %}
+                                <span class="npc-state-text" id="state-text-{{ u['id'] }}">{{ u['state'] or 'Sem estado' }}</span>
+                            </div>
+                        {% endif %}
+
+                        <div class="agent-status-label" id="label-{{ u['id'] }}">
+                            {{ 'Online' if u['is_online'] else 'Offline' }}
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="empty">Nenhum agente cadastrado ainda.</p>
+                {% endfor %}
+            </div>
+
+            {% if npcs %}
+                <div class="section-title npc-section-title">Equipe de Suporte</div>
+                <div class="agent-grid npc-grid">
+                    {% for n in npcs %}
+                        <div class="agent-card npc-card" style="--agent-color: {{ n['color'] or '#c62f27' }};">
+                            {% if n['avatar'] %}
+                                <img class="agent-avatar agent-avatar-clickable" src="{{ url_for('static', filename='npc_images/' + n['avatar']) }}" alt="Imagem de {{ n['name'] }}" onerror="return imgFallback(this, 'agent-avatar')" data-lightbox-src="{{ url_for('static', filename='npc_images/' + n['avatar']) }}" data-lightbox-name="{{ n['name'] }}">
+                            {% else %}
+                                <div class="agent-avatar-placeholder">?</div>
+                            {% endif %}
+                            <div class="agent-name">{{ n['name'] }}</div>
+                            {% if n['description'] %}
+                                <div class="npc-description">{{ n['description'] }}</div>
+                            {% endif %}
+                            {% if n['state'] and npc_state_colors.get(n['state']) %}
+                                <div class="npc-state-badge{{ ' npc-state-badge-morto' if n['state'] == 'Morto' }}" style="--state-color: {{ npc_state_colors[n['state']] }};">
+                                    {% if npc_state_icons.get(n['state']) %}
+                                        <span class="npc-state-icon">{{ npc_state_icons[n['state']] }}</span>
+                                    {% endif %}
+                                    {{ n['state'] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="mural-lightbox" id="agent-lightbox" onclick="closeAgentLightbox(event)">
+            <button type="button" class="mural-lightbox-close" onclick="closeAgentLightbox(event)" aria-label="Fechar"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>x</title><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7L17 17M17 7L7 17"/></svg></button>
+            <div class="mural-lightbox-tilt" id="agent-lightbox-tilt">
+                <img class="mural-lightbox-img" id="agent-lightbox-img" src="" alt="Foto de perfil expandida">
+                <div class="mural-tilt-spotlight-wrap" id="agent-tilt-spotlight-wrap">
+                    <div class="mural-tilt-spotlight" id="agent-tilt-spotlight"></div>
+                </div>
+            </div>
+            <div class="mural-lightbox-caption" id="agent-lightbox-caption"></div>
+        </div>
+
+        <script>
+        function openAgentLightbox(src, name) {
+            document.getElementById('agent-lightbox-img').src = src;
+            document.getElementById('agent-lightbox-caption').textContent = name || '';
+            document.getElementById('agent-lightbox').classList.add('open');
+        }
+
+        function closeAgentLightbox(evt) {
+            if (evt && evt.target && (evt.target.id === 'agent-lightbox-img' || evt.target.id === 'agent-lightbox-tilt')) return;
+            document.getElementById('agent-lightbox').classList.remove('open');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAgentLightbox();
+        });
+
+        document.querySelectorAll('.agent-avatar-clickable').forEach(el => {
+            el.addEventListener('click', () => {
+                openAgentLightbox(el.dataset.lightboxSrc, el.dataset.lightboxName);
+            });
+        });
+
+        // Mesmo efeito de inclinação 3D + brilho do lightbox do mural,
+        // portado para a foto de perfil ampliada dos agentes.
+        (function () {
+            const TILT_LIMIT = 15;
+            const SCALE = 1.05;
+            const PERSPECTIVE = 1200;
+            const DIR = -1;
+
+            const wrap = document.getElementById('agent-lightbox-tilt');
+            const img = document.getElementById('agent-lightbox-img');
+            const spotlightWrap = document.getElementById('agent-tilt-spotlight-wrap');
+            const spotlight = document.getElementById('agent-tilt-spotlight');
+            if (!wrap || !img) return;
+
+            const RESET_TRANSFORM = `perspective(${PERSPECTIVE}px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            wrap.style.transform = RESET_TRANSFORM;
+
+            function handleMove(e) {
+                const rect = wrap.getBoundingClientRect();
+                const px = (e.clientX - rect.left) / rect.width;
+                const py = (e.clientY - rect.top) / rect.height;
+
+                const xRot = (py - 0.5) * (TILT_LIMIT * 2) * DIR;
+                const yRot = (px - 0.5) * -(TILT_LIMIT * 2) * DIR;
+
+                wrap.style.transform =
+                    `perspective(${PERSPECTIVE}px) rotateX(${xRot}deg) rotateY(${yRot}deg) scale3d(${SCALE}, ${SCALE}, ${SCALE})`;
+
+                if (spotlight) {
+                    spotlight.style.left = (px * 100) + '%';
+                    spotlight.style.top = (py * 100) + '%';
+                }
+            }
+
+            wrap.addEventListener('pointerenter', () => {
+                wrap.style.transition = 'none';
+                if (spotlightWrap) spotlightWrap.classList.add('is-visible');
+            });
+            wrap.addEventListener('pointermove', handleMove);
+            wrap.addEventListener('pointerleave', () => {
+                wrap.style.transition = 'transform 0.2s ease-out';
+                wrap.style.transform = RESET_TRANSFORM;
+                if (spotlightWrap) spotlightWrap.classList.remove('is-visible');
+            });
+        })();
+        </script>
+
+        <script>
+        function updateAgentUI(id, isOnline, stats) {
+            const card = document.querySelector(`.agent-card[data-user-id="${id}"]`);
+            const dot = document.getElementById(`dot-${id}`);
+            const label = document.getElementById(`label-${id}`);
+
+            if (card && stats && stats.color) {
+                card.style.setProperty('--agent-color', stats.color);
+            }
+            if (dot) {
+                dot.className = 'agent-status-dot ' + (isOnline ? 'online' : 'offline');
+                if (dot.tagName === 'BUTTON') {
+                    dot.title = (isOnline ? 'Online' : 'Offline') + ' — clique para alternar';
+                    const isSelf = dot.dataset.self === 'true';
+                    dot.setAttribute('onclick', `toggleOnline(${id}, ${isOnline ? 'false' : 'true'}, ${isSelf})`);
+                } else {
+                    dot.title = isOnline ? 'Online' : 'Offline';
+                }
+            }
+            if (label) label.textContent = isOnline ? 'Online' : 'Offline';
+
+            const stateEl = document.getElementById(`state-${id}`);
+            const stateIconEl = document.getElementById(`state-icon-${id}`);
+            const stateTextEl = document.getElementById(`state-text-${id}`);
+            if (stateEl && stats && stats.state !== undefined) {
+                if (stateTextEl) stateTextEl.textContent = stats.state || 'Sem estado';
+                if (stateIconEl) {
+                    stateIconEl.innerHTML = stats.state_icon || '';
+                    stateIconEl.hidden = !stats.state_icon;
+                }
+                stateEl.hidden = false;
+                stateEl.classList.toggle('npc-state-badge-morto', stats.state === 'Morto');
+                stateEl.style.setProperty('--state-color', stats.state_color || '#7a7a7a');
+            }
+        }
+
+        async function toggleOnline(id, newState, isSelf) {
+            const url = isSelf ? '/player/api/set_online' : `/admin/api/set_online/${id}`;
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ online: newState })
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    updateAgentUI(data.id, data.is_online);
+                } else {
+                    showAlert('Erro: ' + data.error);
+                }
+            } catch (e) {
+                showAlert('Erro de conexão');
+            }
+        }
+
+        let lastAgentsRaw = null;
+
+        async function refreshAgents() {
+            if (window.isTypingInField && window.isTypingInField()) return;
+            try {
+                const res = await fetch('/agentes/api/list');
+                const raw = await res.text();
+                if (raw === lastAgentsRaw) return;
+                lastAgentsRaw = raw;
+                const data = JSON.parse(raw);
+                (data.users || []).forEach(u => updateAgentUI(u.id, u.is_online, u));
+            } catch (e) {
+                console.error('Falha ao atualizar agentes', e);
+            }
+        }
+
+        (window.pollWhenVisible || setInterval)(refreshAgents, 4000);
+
+        // Efeito "SpecialText" (scramble/decrypt) da Spell UI, portado para
+        // JS puro: o texto entra decodificando letra por letra a partir de
+        // glifos aleatórios e, depois de um tempo parado, "descriptografa"
+        // de novo — um glitch contínuo, apropriado para um selo confidencial.
+        (function () {
+            const GLYPHS = '!<>-_\\/[]{}—=+*^?#$%&01ABXZ';
+            const STEP_MS = 40;   // velocidade de cada quadro da animação
+            const LOOP_PAUSE_MS = 3600; // pausa "estável" entre um glitch e outro
+
+            function scrambleOnce(el, finalText, onDone) {
+                const chars = Array.from(finalText);
+                const queue = chars.map(ch => {
+                    const start = Math.floor(Math.random() * 18);
+                    return { ch, start, end: start + 8 + Math.floor(Math.random() * 14), current: '' };
+                });
+                let frame = 0;
+
+                function tick() {
+                    let out = '';
+                    let done = 0;
+                    queue.forEach(item => {
+                        if (item.ch === ' ' || item.ch === '[' || item.ch === ']') {
+                            // espaços e colchetes ficam fixos, só as letras embaralham
+                            out += item.ch;
+                            done++;
+                            return;
+                        }
+                        if (frame >= item.end) {
+                            out += item.ch;
+                            done++;
+                        } else if (frame >= item.start) {
+                            if (!item.current || Math.random() < 0.3) {
+                                item.current = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+                            }
+                            out += `<span class="agent-top-secret-glyph">${item.current}</span>`;
+                        } else {
+                            out += '<span class="agent-top-secret-glyph"> </span>';
+                        }
+                    });
+                    el.innerHTML = out;
+
+                    if (done >= queue.length) {
+                        if (onDone) onDone();
+                    } else {
+                        frame++;
+                        setTimeout(tick, STEP_MS);
+                    }
+                }
+                tick();
+            }
+
+            function loop(el, finalText) {
+                scrambleOnce(el, finalText, () => {
+                    setTimeout(() => loop(el, finalText), LOOP_PAUSE_MS);
+                });
+            }
+
+            document.querySelectorAll('.agent-top-secret').forEach(el => {
+                const finalText = el.dataset.scrambleText || el.textContent.trim();
+                loop(el, finalText);
+            });
+        })();
+        </script>
+        <script>
+        // Nome do agente: o ícone de afinidade fica sempre à esquerda do
+        // nome, na mesma linha. Se o nome não couber ao lado do ícone, os
+        // sobrenomes são abreviados (segundo nome vira só a inicial + ".",
+        // depois o terceiro e assim por diante, até caber).
+        (function () {
+            function fitName(el) {
+                var full = el.dataset.fullName || el.textContent.trim();
+                var parts = full.split(/\s+/).filter(Boolean);
+                el.textContent = full;
+                for (var i = 1; i < parts.length && el.scrollWidth > el.clientWidth; i++) {
+                    parts[i] = parts[i].charAt(0) + '.';
+                    el.textContent = parts.join(' ');
+                }
+            }
+            function fitAll() {
+                document.querySelectorAll('.agent-name-text').forEach(fitName);
+            }
+            fitAll();
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
+            window.addEventListener('load', fitAll);
+            var resizeTimer = null;
+            window.addEventListener('resize', function () {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(fitAll, 120);
+            });
+        })();
+        </script>
+        {% include '_chat_dock.html' %}
+    </body>
+</html>

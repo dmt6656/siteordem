@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Campanha — Ordem Paranormal</title>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}?v={{ asset_version('favicon.svg') }}">
+        <link rel="alternate icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}?v={{ asset_version('favicon.png') }}">
+        <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}?v={{ asset_version('favicon.png') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version('style.css') }}">
+        <script src="{{ url_for('static', filename='notify.js') }}?v={{ asset_version('notify.js') }}"></script>
+    </head>
+    <body>
+        <div class="container campanha-page">
+            <header>
+                <h1>Campanha</h1>
+                <div class="header-actions">
+                    {% if session.get('is_admin') %}<a href="{{ url_for('admin_log') }}"{{ ' class="active"'|safe if request.endpoint == 'admin_log' }}>Log</a>{% endif %}
+                    <a href="{{ url_for('logout') }}">Sair</a>
+                </div>
+            </header>
+
+            <nav class="tab-nav">
+                <a href="{{ url_for('admin_panel') if session.get('is_admin') else url_for('player_panel') }}" class="tab-link">Painel</a>
+                <a href="{{ url_for('pericias_panel') }}" class="tab-link">Perícias</a>
+                <a href="{{ url_for('combate_panel') }}" class="tab-link" id="nav-chat-link">Combate<span class="tab-unread-dot" id="nav-chat-unread"></span></a>
+                <a href="{{ url_for('agentes_panel') }}" class="tab-link">Agentes</a>
+                <a href="{{ url_for('campanha_panel') }}" class="tab-link active">Campanha</a>
+                <a href="{{ url_for('mural_panel') }}" class="tab-link">Mural</a>
+                <a href="{{ url_for('anotacoes_panel') }}" class="tab-link">Anotações</a>
+                <a href="{{ url_for('portrait_panel') }}" class="tab-link">Portrait</a>
+            </nav>
+
+            <div class="campaign-hero">
+                <div class="campaign-banner-frame" id="campaign-banner-frame">
+                    {% if campaign['banner'] %}
+                        <img class="campaign-banner" id="campaign-banner-img" src="{{ url_for('static', filename='campaign_banners/' + campaign['banner']) }}" alt="Banner da campanha" onerror="return imgFallback(this, 'banner')">
+                    {% else %}
+                        <div class="campaign-banner-placeholder" id="campaign-banner-img">
+                            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+                            <span>Sem banner</span>
+                        </div>
+                    {% endif %}
+                    {% if session.get('is_admin') and campaign['banner'] %}
+                        <form id="campaign-banner-remove-form" method="POST" action="{{ url_for('campanha_remove_banner') }}"
+                            class="campaign-banner-remove-form"
+                            onsubmit="return confirmDelete(this, 'Remover o banner atual?');">
+                            <button type="submit" class="campaign-banner-remove-btn" title="Remover banner" aria-label="Remover banner">
+                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+
+                <div class="campaign-hero-card">
+                    <div class="campaign-eyebrow">Dossiê da Campanha</div>
+                    <h2 class="campaign-name" id="campaign-name">{{ campaign['name'] or 'Campanha sem nome' }}</h2>
+                    <p class="campaign-description" id="campaign-description">{{ campaign['description'] or 'Nenhuma descrição adicionada ainda.' }}</p>
+                </div>
+            </div>
+
+            {% if session.get('is_admin') %}
+                <div class="panel-section campaign-options-section">
+                    <div class="section-title">Opções</div>
+
+                    <form class="campaign-edit-form" method="POST" action="{{ url_for('campanha_options') }}">
+                        <label class="lock-checkbox">
+                            <input type="checkbox" name="financeiro_visible" {% if campaign['financeiro_visible'] %}checked{% endif %}>
+                            Exibir aba Financeiro para os jogadores
+                        </label>
+                        <label class="lock-checkbox">
+                            <input type="checkbox" name="sem_sanidade" {% if campaign['sem_sanidade'] %}checked{% endif %}>
+                            Jogar sem Sanidade (oculta a Sanidade de todos)
+                        </label>
+                        <button type="submit">Salvar Opções</button>
+                    </form>
+                </div>
+
+                <div class="panel-section">
+                    <div class="section-title">Editar Campanha</div>
+
+                    <form class="campaign-edit-form" method="POST" action="{{ url_for('campanha_update') }}" enctype="multipart/form-data">
+                        <div class="inv-field">
+                            <label>Nome da Campanha</label>
+                            <input type="text" name="name" value="{{ campaign['name'] }}" placeholder="Nome da campanha">
+                        </div>
+                        <div class="inv-field">
+                            <label>Descrição da Campanha</label>
+                            <textarea name="description" placeholder="Descreva a campanha">{{ campaign['description'] }}</textarea>
+                        </div>
+                        <div class="inv-field">
+                            <label>Banner (imagem)</label>
+                            <input type="file" name="banner" accept="image/*" class="perspective-upload">
+                        </div>
+                        <button type="submit">Salvar Campanha</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+
+        <script src="{{ url_for('static', filename='image-editor.js') }}?v={{ asset_version('image-editor.js') }}"></script>
+        <script>
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        const isAdminUser = {{ 'true' if session.get('is_admin') else 'false' }};
+        const bannerRemoveUrl = {{ url_for('campanha_remove_banner')|tojson }};
+        let lastCampaignRaw = null;
+
+        async function refreshCampaign() {
+            if (window.isTypingInField && window.isTypingInField()) return;
+            try {
+                const res = await fetch('/campanha/api/status');
+                const raw = await res.text();
+                if (raw === lastCampaignRaw) return;
+                lastCampaignRaw = raw;
+                const c = JSON.parse(raw);
+
+                document.getElementById('campaign-name').textContent = c.name || 'Campanha sem nome';
+                document.getElementById('campaign-description').textContent = c.description || 'Nenhuma descrição adicionada ainda.';
+
+                const frame = document.getElementById('campaign-banner-frame');
+                const removeBtnHtml = (isAdminUser && c.banner) ? `
+                    <form id="campaign-banner-remove-form" method="POST" action="${bannerRemoveUrl}" class="campaign-banner-remove-form" onsubmit="return confirmDelete(this, 'Remover o banner atual?');">
+                        <button type="submit" class="campaign-banner-remove-btn" title="Remover banner" aria-label="Remover banner">
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>
+                        </button>
+                    </form>` : '';
+                if (c.banner) {
+                    frame.innerHTML = `<img class="campaign-banner" id="campaign-banner-img" src="/static/campaign_banners/${c.banner}" alt="Banner da campanha" onerror="return imgFallback(this, 'banner')">` + removeBtnHtml;
+                } else {
+                    frame.innerHTML = `<div class="campaign-banner-placeholder" id="campaign-banner-img"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/><circle cx="8.5" cy="8.5" r="1.5"/></svg><span>Sem banner</span></div>`;
+                }
+            } catch (e) {
+                console.error('Falha ao atualizar campanha', e);
+            }
+        }
+
+        (window.pollWhenVisible || setInterval)(refreshCampaign, 5000);
+        </script>
+        <script>
+        // Mantém a posição de rolagem da página entre o envio de um formulário
+        // (que recarrega a página) e o carregamento seguinte, para a tela não
+        // "pular" pro topo a cada alteração salva.
+        (function() {
+            const scrollKey = 'scrollpos:' + window.location.pathname;
+
+            function restoreScroll() {
+                const saved = sessionStorage.getItem(scrollKey);
+                if (saved !== null) window.scrollTo(0, parseInt(saved, 10));
+            }
+
+            window.saveScrollPos = function() {
+                sessionStorage.setItem(scrollKey, String(window.scrollY));
+            };
+
+            restoreScroll();
+            window.addEventListener('load', restoreScroll);
+            document.addEventListener('submit', window.saveScrollPos, true);
+            window.addEventListener('beforeunload', window.saveScrollPos);
+        })();
+        </script>
+        {% include '_chat_dock.html' %}
+    </body>
+</html>

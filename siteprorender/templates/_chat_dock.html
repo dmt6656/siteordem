@@ -1,0 +1,498 @@
+{# Chat fixo — incluído em todas as abas (veja "Chat fixo" no style.css). #}
+<aside class="combat-chat-dock" id="combat-chat-dock" aria-label="Chat">
+    <div class="combat-chat-section">
+        <button type="button" class="combat-chat-chip" id="combat-chat-toggle" onclick="toggleCombatChat()" aria-expanded="true" aria-controls="combat-chat-body" aria-label="Mensagens" title="Mensagens">
+            <svg class="combat-chat-chip-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9h8m-8 4h6m4-9a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z"/></svg>
+        </button>
+        <div class="combat-inventory-grid combat-chat-body" id="combat-chat-body">
+            {% if session.get('is_admin') %}
+                <div class="chat-clear-row">
+                    <button type="button" class="btn-sm btn-delete chat-clear-btn" onclick="clearChat()">Apagar Chat</button>
+                </div>
+            {% endif %}
+            <div class="chat-log chat-log-compact" id="chat-log">
+                <p class="empty" id="chat-empty">Carregando mensagens...</p>
+            </div>
+            <div class="chat-send-wrap">
+                <div class="chat-cmd-menu" id="chat-cmd-menu" hidden></div>
+                <form class="chat-send-form" id="chat-send-form" onsubmit="return sendMessage(event)">
+                    <input type="text" id="chat-input" placeholder="Escreva uma mensagem..." maxlength="1000" autocomplete="off">
+                    <button type="submit">Enviar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</aside>
+        <script>
+        // Chat fixo, disponível em todas as abas. Fica dentro de uma função
+        // para não colidir com os nomes (escapeHtml, D20_ICON...) dos scripts
+        // de cada página.
+        (function () {
+
+        const isAdminView = {{ 'true' if session.get('is_admin') else 'false' }};
+        const MY_USER_ID = {{ session.get('user_id') or 0 }};
+        const RITUAL_ELEMENT_ICON_MARKUP = {{ chat_dock_ritual_icons | tojson }};
+        const COLLAPSE_KEY = 'combatChatCollapsed';
+        const WIDE_MIN_PX = 1500;
+
+        let lastMessageId = 0;
+        let isCollapsed = false;
+        const SEND_COOLDOWN_MS = 1000;
+        let lastSendAt = 0;
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function formatTimestamp(iso) {
+            try {
+                const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+                return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function applyTimestamps(scope) {
+            scope.querySelectorAll('.chat-timestamp[data-ts]').forEach(el => {
+                if (!el.textContent) {
+                    el.textContent = formatTimestamp(el.getAttribute('data-ts'));
+                }
+            });
+        }
+
+        function isScrolledNearBottom(el) {
+            return el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+        }
+
+        const D20_ICON_SVG = '<svg class="d20-icon chat-roll-icon" viewBox="-16 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M106.75 215.06L1.2 370.95c-3.08 5 .1 11.5 5.93 12.14l208.26 22.07-108.64-190.1zM7.41 315.43L82.7 193.08 6.06 147.1c-2.67-1.6-6.06.32-6.06 3.43v162.81c0 4.03 5.29 5.53 7.41 2.09zM18.25 423.6l194.4 87.66c5.3 2.45 11.35-1.43 11.35-7.26v-65.67l-203.55-22.3c-4.45-.5-6.23 5.59-2.2 7.57zm81.22-257.78L179.4 22.88c4.34-7.06-3.59-15.25-10.78-11.14L17.81 110.35c-2.47 1.62-2.39 5.26.13 6.78l81.53 48.69zM240 176h109.21L253.63 7.62C250.5 2.54 245.25 0 240 0s-10.5 2.54-13.63 7.62L130.79 176H240zm233.94-28.9l-76.64 45.99 75.29 122.35c2.11 3.44 7.41 1.94 7.41-2.1V150.53c0-3.11-3.39-5.03-6.06-3.43zm-93.41 18.72l81.53-48.7c2.53-1.52 2.6-5.16.13-6.78l-150.81-98.6c-7.19-4.11-15.12 4.08-10.78 11.14l79.93 142.94zm79.02 250.21L256 438.32v65.67c0 5.84 6.05 9.71 11.35 7.26l194.4-87.66c4.03-1.97 2.25-8.06-2.2-7.56zm-86.3-200.97l-108.63 190.1 208.26-22.07c5.83-.65 9.01-7.14 5.93-12.14L373.25 215.06zM240 208H139.57L240 383.75 340.43 208H240z"/></svg>';
+
+        // Espelha format_roll_content() do backend (app.py) para realçar o
+        // resultado das rolagens já ao aparecer no chat, antes do próximo
+        // reload da página recarregar a versão renderizada pelo servidor.
+        function formatRollContent(content) {
+            let html = escapeHtml(content);
+            html = html.replace(/=\s*(\d+)(\s*—\s*20 NATURAL!)?\s*$/, (full, total, nat) => (
+                `= <span class="chat-roll-total">${total}</span>${nat || ''}`
+            ));
+            html = html.replace(/—\s*20 NATURAL!/g, m => `<span class="chat-roll-highlight">${m}</span>`);
+            html = html.replace(/CRÍTICO\s*x\d+!/g, m => `<span class="chat-roll-highlight">${m}</span>`);
+            return html;
+        }
+
+        function ritualChatIconSvg(element) {
+            const markup = RITUAL_ELEMENT_ICON_MARKUP[(element || '').toLowerCase()] || '';
+            return `<svg class="ritual-chat-icon" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${markup}</svg>`;
+        }
+
+        function buildMessageEl(m) {
+            const div = document.createElement('div');
+            div.className = 'chat-message' + (m.kind === 'roll' ? ' chat-roll' : m.kind === 'ritual' ? ' chat-ritual' : '');
+            div.id = `msg-${m.id}`;
+            div.dataset.msgId = m.id;
+            div.dataset.ritualElement = (m.ritual_element || '').toLowerCase();
+            div.style.setProperty('--msg-color', m.user_color || '#c62f27');
+
+            const adminBadge = m.is_admin ? '<span class="badge">ADMIN</span>' : '';
+            const characterHtml = m.character_name
+                ? `<span class="chat-character">(${escapeHtml(m.character_name)})</span>`
+                : '';
+            const rolledBy = m.rolled_by || (m.rolled_by_admin ? 'Mestre' : '');
+            const originHtml = (m.kind === 'roll' && !m.is_admin && rolledBy)
+                ? `<span class="chat-roll-origin chat-roll-origin-admin" title="Rolagem feita pelo mestre em nome do jogador">Rolado por ${escapeHtml(rolledBy)}</span>`
+                : '';
+            const deleteBtn = isAdminView
+                ? `<button type="button" class="btn-sm btn-delete chat-msg-delete" onclick="deleteMessage(${m.id})" aria-label="Excluir" title="Excluir"><svg class="icon-trash" viewBox="-3 -2 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2h5a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h5V1a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1zm3.8 6l-.613 9.2a3 3 0 0 1-2.993 2.8H5.826a3 3 0 0 1-2.993-2.796L2.205 8H15.8zM7 9a1 1 0 0 0-1 1v7a1 1 0 0 0 2 0v-7a1 1 0 0 0-1-1zm4 0a1 1 0 0 0-1 1v7a1 1 0 0 0 2 0v-7a1 1 0 0 0-1-1z"/></svg></button>`
+                : '';
+            const avatarHtml = m.user_avatar
+                ? `<img class="chat-avatar" src="/static/avatar_images/${m.user_avatar}" alt="Imagem de ${escapeHtml(m.username)}">`
+                : `<div class="chat-avatar chat-avatar-placeholder">${escapeHtml((m.username || '?')[0].toUpperCase())}</div>`;
+
+            div.innerHTML = `
+                ${avatarHtml}
+                <div class="chat-message-body">
+                    <div class="chat-message-header">
+                        <span class="chat-username">${escapeHtml(m.username)}${adminBadge}</span>
+                        ${characterHtml}
+                        ${originHtml}
+                        <span class="chat-timestamp" data-ts="${m.created_at}">${formatTimestamp(m.created_at)}</span>
+                        ${deleteBtn}
+                    </div>
+                    <div class="chat-content">${m.kind === 'roll' ? D20_ICON_SVG : m.kind === 'ritual' ? ritualChatIconSvg(m.ritual_element) : ''}${m.kind === 'roll' ? formatRollContent(m.content) : escapeHtml(m.content)}</div>
+                </div>
+            `;
+            return div;
+        }
+
+        function appendMessages(messages, fromPoll) {
+            const log = document.getElementById('chat-log');
+            const empty = document.getElementById('chat-empty');
+            if (!messages.length) return;
+
+            const wasNearBottom = isScrolledNearBottom(log);
+            let appendedAny = false;
+            let hasNewRoll = false;
+
+            messages.forEach(m => {
+                // Evita duplicar: se a mensagem já está na tela (ex: já foi
+                // inserida pelo envio local e o poll trouxe ela de novo,
+                // ou dois polls sobrepostos retornaram o mesmo lote), ignora.
+                if (document.getElementById(`msg-${m.id}`)) {
+                    lastMessageId = Math.max(lastMessageId, m.id);
+                    return;
+                }
+                if (empty) empty.remove();
+                log.appendChild(buildMessageEl(m));
+                lastMessageId = Math.max(lastMessageId, m.id);
+                appendedAny = true;
+                // Rolagem do próprio usuário já tocou o som no alerta da página;
+                // pelo poll, só toca para rolagens de outras pessoas (ou feitas
+                // pelo mestre em nome dele).
+                // (também é "própria" a rolagem que esta aba fez em nome de outro agente — o pop-up já tocou o som)
+                const ownRoll = fromPoll && ((m.user_id === MY_USER_ID && !m.rolled_by_admin && !m.rolled_by)
+                    || (typeof isOwnRoll === 'function' && isOwnRoll(m.id)));
+                // Só conta como rolagem nova se veio do poll depois da
+                // primeira carga; o histórico carregado ao abrir/trocar de
+                // página não deve tocar o som.
+                if (fromPoll && m.kind === 'roll' && !ownRoll) hasNewRoll = true;
+            });
+
+            if (appendedAny && wasNearBottom) log.scrollTop = log.scrollHeight;
+            if (hasNewRoll && typeof playDiceSound === 'function') playDiceSound();
+        }
+
+        async function sendMessage(evt) {
+            evt.preventDefault();
+            const input = document.getElementById('chat-input');
+            const button = document.querySelector('#chat-send-form button[type="submit"]');
+            const text = input.value.trim();
+            if (!text) return false;
+
+            const now = Date.now();
+            if (now - lastSendAt < SEND_COOLDOWN_MS) return false;
+            lastSendAt = now;
+
+            input.disabled = true;
+            if (button) button.disabled = true;
+            // Conectado por WebSocket: envia pelo socket; a mensagem volta
+            // para todos (inclusive para quem enviou) pelo próprio socket.
+            if (wsSend({ type: 'send', message: text })) {
+                input.value = '';
+            } else {
+                try {
+                    const res = await fetch('/chat/api/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: text })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        input.value = '';
+                        appendMessages([data.message]);
+                    } else {
+                        showAlert('Erro: ' + data.error);
+                    }
+                } catch (e) {
+                    showAlert('Erro de conexão');
+                }
+            }
+
+            const elapsed = Date.now() - lastSendAt;
+            const remaining = Math.max(0, SEND_COOLDOWN_MS - elapsed);
+            setTimeout(() => {
+                input.disabled = false;
+                if (button) button.disabled = false;
+                input.focus();
+            }, remaining);
+
+            return false;
+        }
+
+        async function deleteMessage(id) {
+            if (!(await askConfirm('Excluir esta mensagem?'))) return;
+            try {
+                const res = await fetch(`/admin/api/chat/delete/${id}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.ok) {
+                    const el = document.getElementById(`msg-${id}`);
+                    if (el) el.remove();
+                } else {
+                    showAlert('Erro: ' + data.error);
+                }
+            } catch (e) {
+                showAlert('Erro de conexão');
+            }
+        }
+
+        async function clearChat() {
+            if (!(await askConfirm('Apagar TODAS as mensagens do chat? Esta ação não pode ser desfeita.'))) return;
+            try {
+                const res = await fetch('/admin/api/chat/clear', { method: 'POST' });
+                const data = await res.json();
+                if (data.ok) {
+                    const log = document.getElementById('chat-log');
+                    log.innerHTML = '<p class="empty" id="chat-empty">Nenhuma mensagem ainda.</p>';
+                    lastMessageId = 0;
+                } else {
+                    showAlert('Erro: ' + data.error);
+                }
+            } catch (e) {
+                showAlert('Erro de conexão');
+            }
+        }
+
+        let pollInFlight = false;
+        let firstLoadDone = false;
+
+        // pollChat(force): com o WebSocket aberto o servidor já empurra tudo,
+        // então o polling só roda de verdade quando o socket está fora do ar
+        // (ou forçado: carga inicial, reconexão, abrir o chat, rede de segurança).
+        async function pollChat(force) {
+            if (wsOpen && force !== true) return;
+            // Se o poll anterior ainda não voltou (ex: servidor lento),
+            // não dispara outro por cima — evita respostas atrasadas
+            // duplicando mensagens na tela.
+            if (pollInFlight) return;
+            pollInFlight = true;
+            try {
+                // Recolhido: só espia (peek) para não marcar como lido; assim
+                // o chip mostra a bolinha de mensagens não lidas.
+                const peek = isCollapsed ? '&peek=1' : '';
+                const res = await fetch(`/chat/api/list?after_id=${lastMessageId}${peek}`);
+                const data = await res.json();
+                appendMessages(data.messages || [], firstLoadDone);
+                if (!firstLoadDone) {
+                    firstLoadDone = true;
+                    const empty = document.getElementById('chat-empty');
+                    if (empty) empty.textContent = 'Nenhuma mensagem ainda.';
+                    const log = document.getElementById('chat-log');
+                    log.scrollTop = log.scrollHeight;
+                }
+            } catch (e) {
+                console.error('Falha ao atualizar chat', e);
+            } finally {
+                pollInFlight = false;
+            }
+        }
+
+        function toggleCombatChat(forceCollapsed) {
+            const body = document.getElementById('combat-chat-body');
+            const btn = document.getElementById('combat-chat-toggle');
+            if (!body || !btn) return;
+            const collapsed = typeof forceCollapsed === 'boolean'
+                ? forceCollapsed
+                : !body.classList.contains('is-collapsed');
+            isCollapsed = collapsed;
+            body.classList.toggle('is-collapsed', collapsed);
+            btn.setAttribute('aria-expanded', String(!collapsed));
+            if (!collapsed) {
+                btn.classList.remove('has-unread');
+                // Ao abrir, volta para as mensagens mais recentes e marca
+                // tudo como lido no servidor.
+                const log = document.getElementById('chat-log');
+                if (log) log.scrollTop = log.scrollHeight;
+                if (firstLoadDone) { pollChat(true); wsSend({ type: 'read' }); }
+            }
+            try {
+                localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+            } catch (e) {}
+        }
+
+        // Estado inicial: usa a última escolha da pessoa; sem escolha, fica
+        // aberto em telas largas e fechado em telas estreitas (onde o chat
+        // flutua sobre a página). Aqui não grava no localStorage.
+        (function initCollapsed() {
+            let stored = null;
+            try { stored = localStorage.getItem(COLLAPSE_KEY); } catch (e) {}
+            const collapsed = stored === null ? window.innerWidth < WIDE_MIN_PX : stored === '1';
+            isCollapsed = collapsed;
+            document.getElementById('combat-chat-body').classList.toggle('is-collapsed', collapsed);
+            document.getElementById('combat-chat-toggle').setAttribute('aria-expanded', String(!collapsed));
+        })();
+
+        // ---- WebSocket ------------------------------------------------
+        let ws = null;
+        let wsOpen = false;
+        let wsRetry = 0;
+        let wsTimer = null;
+
+        function wsSend(obj) {
+            if (!wsOpen || !ws || ws.readyState !== 1) return false;
+            try {
+                ws.send(JSON.stringify(obj));
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function removeMessageEl(id) {
+            const el = document.getElementById(`msg-${id}`);
+            if (el) el.remove();
+        }
+
+        function handleWsEvent(ev) {
+            if (ev.type === 'message' && ev.message) {
+                const m = ev.message;
+                const fresh = !document.getElementById(`msg-${m.id}`);
+                appendMessages([m], true);
+                if (!fresh) return;
+                if (isCollapsed) {
+                    // Chat recolhido: acende a bolinha de não lido (mensagens de
+                    // outras pessoas) e não marca como lido no servidor.
+                    if (m.user_id !== MY_USER_ID) {
+                        const btn = document.getElementById('combat-chat-toggle');
+                        if (btn) btn.classList.add('has-unread');
+                    }
+                } else {
+                    wsSend({ type: 'read' });
+                }
+            } else if (ev.type === 'delete') {
+                removeMessageEl(ev.id);
+            } else if (ev.type === 'clear') {
+                const log = document.getElementById('chat-log');
+                log.innerHTML = '<p class="empty" id="chat-empty">Nenhuma mensagem ainda.</p>';
+                lastMessageId = 0;
+            } else if (ev.type === 'error') {
+                showAlert('Erro: ' + ev.error);
+            }
+        }
+
+        function scheduleWsReconnect() {
+            if (wsTimer) return;
+            // Recuo progressivo: 1s, 2s, 4s... até 60s. Em servidores sem
+            // suporte a WebSocket isso quase não custa nada: o polling segue.
+            const delay = Math.min(60000, 1000 * Math.pow(2, wsRetry++));
+            wsTimer = setTimeout(() => { wsTimer = null; connectWs(); }, delay);
+        }
+
+        function connectWs() {
+            if (!('WebSocket' in window)) return;
+            if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+            const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/chat/ws';
+            try {
+                ws = new WebSocket(url);
+            } catch (e) {
+                scheduleWsReconnect();
+                return;
+            }
+            ws.onopen = () => {
+                wsOpen = true;
+                wsRetry = 0;
+                // Busca o que chegou enquanto o socket estava fora do ar.
+                pollChat(true);
+            };
+            ws.onmessage = (e) => {
+                let ev;
+                try { ev = JSON.parse(e.data); } catch (err) { return; }
+                handleWsEvent(ev);
+            };
+            ws.onclose = () => {
+                const wasOpen = wsOpen;
+                wsOpen = false;
+                ws = null;
+                if (wasOpen) pollChat(true);
+                scheduleWsReconnect();
+            };
+            ws.onerror = () => { /* o onclose cuida da reconexão */ };
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && !wsOpen) {
+                wsRetry = 0;
+                if (wsTimer) { clearTimeout(wsTimer); wsTimer = null; }
+                connectWs();
+            }
+        });
+
+        pollChat(true);
+        connectWs();
+        // Polling de reserva (3s) só age com o WebSocket fora do ar; com ele
+        // aberto, uma conferência a cada 60s serve de rede de segurança.
+        (window.pollWhenVisible || setInterval)(pollChat, 3000);
+        setInterval(() => { if (wsOpen) pollChat(true); }, 60000);
+
+        // Menu de comandos de rolagem de dado ("/d20", "/d8"...).
+        const DICE_COMMANDS = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+        const cmdInput = document.getElementById('chat-input');
+        const cmdMenu = document.getElementById('chat-cmd-menu');
+
+        function renderCmdMenu(filterText) {
+            const matches = DICE_COMMANDS.filter(c => c.startsWith(filterText));
+            if (!matches.length) {
+                hideCmdMenu();
+                return;
+            }
+            cmdMenu.innerHTML = matches.map(c =>
+                `<button type="button" class="chat-cmd-item" data-cmd="/${c}">/${c}</button>`
+            ).join('');
+            cmdMenu.hidden = false;
+        }
+
+        function hideCmdMenu() {
+            cmdMenu.hidden = true;
+            cmdMenu.innerHTML = '';
+        }
+
+        // Comando "/m<quantidade>d<dado>" (ex: /m3d20): rola vários dados e
+        // fica com o melhor. O menu sugere a quantidade e depois o dado.
+        function renderBestCmdMenu(count, dicePart) {
+            let options;
+            if (!count) {
+                options = ['/m2d20', '/m3d20', '/m4d20', '/m5d20'];
+            } else {
+                options = DICE_COMMANDS
+                    .filter(c => c.startsWith(dicePart || 'd'))
+                    .map(c => `/m${count}${c}`);
+            }
+            if (!options.length) {
+                hideCmdMenu();
+                return;
+            }
+            cmdMenu.innerHTML = options.map(c =>
+                `<button type="button" class="chat-cmd-item" data-cmd="${c}">${c}</button>`
+            ).join('');
+            cmdMenu.hidden = false;
+        }
+
+        cmdInput.addEventListener('input', () => {
+            const val = cmdInput.value;
+            const m = /^\/(d\w*)$/i.exec(val);
+            const best = /^\/m(\d*)(d\w*)?$/i.exec(val);
+            if (m) {
+                renderCmdMenu(m[1].toLowerCase());
+            } else if (best) {
+                renderBestCmdMenu(best[1], (best[2] || '').toLowerCase());
+            } else {
+                hideCmdMenu();
+            }
+        });
+
+        cmdMenu.addEventListener('click', (evt) => {
+            const btn = evt.target.closest('.chat-cmd-item');
+            if (!btn) return;
+            cmdInput.value = btn.dataset.cmd;
+            hideCmdMenu();
+            cmdInput.focus();
+            document.getElementById('chat-send-form').requestSubmit();
+        });
+
+        cmdInput.addEventListener('keydown', (evt) => {
+            if (evt.key === 'Escape') hideCmdMenu();
+        });
+
+        document.addEventListener('click', (evt) => {
+            if (!cmdMenu.hidden && evt.target !== cmdInput && !cmdMenu.contains(evt.target)) {
+                hideCmdMenu();
+            }
+        });
+
+        // Usados pelos atributos onsubmit/onclick do HTML do chat.
+        window.sendMessage = sendMessage;
+        window.deleteMessage = deleteMessage;
+        window.clearChat = clearChat;
+        window.toggleCombatChat = toggleCombatChat;
+        })();
+        </script>

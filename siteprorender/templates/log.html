@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Log — Ordem Paranormal</title>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}?v={{ asset_version('favicon.svg') }}">
+        <link rel="alternate icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}?v={{ asset_version('favicon.png') }}">
+        <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}?v={{ asset_version('favicon.png') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version('style.css') }}">
+        <script src="{{ url_for('static', filename='notify.js') }}?v={{ asset_version('notify.js') }}"></script>
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <h1>Log de Ações</h1>
+                <div class="header-actions">
+                    {% if session.get('is_admin') %}<a href="{{ url_for('admin_log') }}"{{ ' class="active"'|safe if request.endpoint == 'admin_log' }}>Log</a>{% endif %}
+                    <a href="{{ url_for('logout') }}">Sair</a>
+                </div>
+            </header>
+
+            <nav class="tab-nav">
+                <a href="{{ url_for('admin_panel') }}" class="tab-link">Painel</a>
+                <a href="{{ url_for('pericias_panel') }}" class="tab-link">Perícias</a>
+                <a href="{{ url_for('combate_panel') }}" class="tab-link" id="nav-chat-link">Combate<span class="tab-unread-dot" id="nav-chat-unread"></span></a>
+                <a href="{{ url_for('agentes_panel') }}" class="tab-link">Agentes</a>
+                <a href="{{ url_for('campanha_panel') }}" class="tab-link">Campanha</a>
+                <a href="{{ url_for('mural_panel') }}" class="tab-link">Mural</a>
+                <a href="{{ url_for('anotacoes_panel') }}" class="tab-link">Anotações</a>
+                <a href="{{ url_for('portrait_panel') }}" class="tab-link">Portrait</a>
+            </nav>
+
+            <div class="section-title chat-title-row">
+                Histórico de ações dos jogadores
+                <button type="button" class="btn-sm btn-delete" onclick="clearLog()">Limpar Log</button>
+            </div>
+
+            <div class="log-list">
+                {% for l in logs %}
+                    <div class="log-entry">
+                        <div class="log-entry-header">
+                            <span class="log-entry-user">
+                                {{ l['username'] }}{% if l['character_name'] %} <span class="log-entry-character">({{ l['character_name'] }})</span>{% endif %}
+                            </span>
+                            <span class="chat-timestamp" data-ts="{{ l['created_at'] }}"></span>
+                        </div>
+                        <div class="log-entry-action">{{ l['action'] }}</div>
+                    </div>
+                {% else %}
+                    <p class="empty">Nenhuma ação registrada ainda.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <script>
+        function formatTimestamp(iso) {
+            try {
+                const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+                return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return '';
+            }
+        }
+
+        document.querySelectorAll('.chat-timestamp[data-ts]').forEach(el => {
+            el.textContent = formatTimestamp(el.getAttribute('data-ts'));
+        });
+
+        async function clearLog() {
+            if (!confirm('Apagar todo o histórico de ações registradas? Isso não pode ser desfeito.')) return;
+            try {
+                const res = await fetch('{{ url_for("api_log_clear") }}', { method: 'POST' });
+                const data = await res.json();
+                if (data.ok) location.reload();
+            } catch (e) {
+                alert('Erro de conexão ao limpar o log.');
+            }
+        }
+        </script>
+        {% include '_chat_dock.html' %}
+    </body>
+</html>
