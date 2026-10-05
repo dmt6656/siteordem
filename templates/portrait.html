@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Portrait — Ordem Paranormal</title>
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}?v={{ asset_version('favicon.svg') }}">
+        <link rel="alternate icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}?v={{ asset_version('favicon.png') }}">
+        <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}?v={{ asset_version('favicon.png') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version('style.css') }}">
+        <script src="{{ url_for('static', filename='notify.js') }}?v={{ asset_version('notify.js') }}"></script>
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <h1>Portrait</h1>
+                <div class="header-actions">
+                    {% if session.get('is_admin') %}<a href="{{ url_for('admin_log') }}"{{ ' class="active"'|safe if request.endpoint == 'admin_log' }}>Log</a>{% endif %}
+                    <a href="{{ url_for('logout') }}">Sair</a>
+                </div>
+            </header>
+
+            <nav class="tab-nav">
+                <a href="{{ url_for('admin_panel') if session.get('is_admin') else url_for('player_panel') }}" class="tab-link">Painel</a>
+                <a href="{{ url_for('pericias_panel') }}" class="tab-link">Perícias</a>
+                <a href="{{ url_for('combate_panel') }}" class="tab-link" id="nav-chat-link">Combate<span class="tab-unread-dot" id="nav-chat-unread"></span></a>
+                <a href="{{ url_for('agentes_panel') }}" class="tab-link">Agentes</a>
+                <a href="{{ url_for('campanha_panel') }}" class="tab-link">Campanha</a>
+                <a href="{{ url_for('mural_panel') }}" class="tab-link">Mural</a>
+                <a href="{{ url_for('anotacoes_panel') }}" class="tab-link">Anotações</a>
+                <a href="{{ url_for('portrait_panel') }}" class="tab-link active">Portrait</a>
+            </nav>
+
+            {% if my_token %}
+            <div class="panel-section">
+                <div class="section-title">Meu Portrait para o OBS</div>
+
+                <div class="portrait-step">
+                    <div class="portrait-step-title"><span class="portrait-step-num">1</span>Escolha o que mostrar</div>
+
+                    <div class="portrait-groups">
+                        <div class="portrait-group">
+                            <span class="portrait-group-label">Itens</span>
+                            <div class="portrait-chips" id="portrait-options">
+                                <label class="portrait-chip"><input type="checkbox" data-k="f"{{ ' checked' if my_opts.f != '0' }}><span>Foto</span></label>
+                                <label class="portrait-chip"><input type="checkbox" data-k="n"{{ ' checked' if my_opts.n != '0' }}><span>Nome</span></label>
+                                <label class="portrait-chip"><input type="checkbox" data-k="t"{{ ' checked' if my_opts.t != '0' }}><span>Título</span></label>
+                                <label class="portrait-chip"><input type="checkbox" data-k="x"{{ ' checked' if my_opts.x == '1' }}><span>NEX</span></label>
+                                <label class="portrait-chip" title="Símbolo do elemento de afinidade ao lado do nome (aparece a partir de 50% de NEX)"><input type="checkbox" data-k="e"{{ ' checked' if my_opts.e != '0' }}><span>Afinidade</span></label>
+                                <label class="portrait-chip"><input type="checkbox" data-k="s"{{ ' checked' if my_opts.s != '0' }}><span>Estado</span></label>
+                                <label class="portrait-chip"><input type="checkbox" data-k="pv"{{ ' checked' if my_opts.pv != '0' }}><span>PV</span></label>
+                            </div>
+                        </div>
+
+                        <div class="portrait-group">
+                            <span class="portrait-group-label">Layout</span>
+                            <div class="portrait-chips" id="portrait-layout">
+                                <label class="portrait-chip"><input type="radio" name="portrait-layout" value="h"{{ ' checked' if my_opts.l != 'v' }}><span>Horizontal</span></label>
+                                <label class="portrait-chip"><input type="radio" name="portrait-layout" value="v"{{ ' checked' if my_opts.l == 'v' }}><span>Vertical</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="portrait-stage">
+                        <iframe id="portrait-frame" width="560" height="240" title="Pré-visualização do portrait"></iframe>
+                    </div>
+                    <div class="portrait-save-row">
+                        <button type="button" id="portrait-save" class="portrait-primary">Salvar</button>
+                        <span id="portrait-save-status" class="portrait-save-status" role="status"></span>
+                    </div>
+                    <p class="portrait-note">Pré-visualização ao vivo. O fundo xadrez é só daqui: no OBS o fundo fica transparente. Os números mudam sozinhos conforme a campanha: com Sanidade ligada aparecem PV (vermelho), SAN (azul) e PE (amarelo); desligada, PV e PD (amarelo).</p>
+                </div>
+
+                <div class="portrait-step">
+                    <div class="portrait-step-title"><span class="portrait-step-num">2</span>Copie o link</div>
+                    <input type="text" id="portrait-link" class="portrait-link" readonly value="">
+                    <div class="portrait-actions">
+                        <button type="button" id="portrait-copy" class="portrait-primary">Copiar link</button>
+                        <a class="portrait-btn" id="portrait-open" href="#" target="_blank" rel="noopener">Abrir em nova aba</a>
+                        <form method="POST" action="{{ url_for('portrait_regenerate') }}"
+                              onsubmit="return confirm('Gerar um novo link? O link atual deixa de funcionar e você precisa colar o novo no OBS.');">
+                            <button type="submit" class="btn-delete">Gerar novo link</button>
+                        </form>
+                    </div>
+                    <p class="portrait-note">O link é sempre o mesmo: quando você clica em <b>Salvar</b>, o OBS atualiza sozinho em alguns segundos, sem precisar colar de novo. Quem tiver esse link vê o seu portrait, então não divulgue.</p>
+                </div>
+
+                <div class="portrait-step">
+                    <div class="portrait-step-title"><span class="portrait-step-num">3</span>Cole no OBS</div>
+                    <p class="portrait-note">Em <b>Fontes</b>, clique em <b>+</b>, escolha <b>Navegador</b> e cole o link.
+                        Tamanho sugerido: <b id="size-hint">560 × 240</b>.</p>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if session.get('is_admin') %}
+            <div class="panel-section">
+                <div class="section-title">Layout para todos os agentes</div>
+                <div class="portrait-step">
+                    <p class="portrait-note" style="margin-bottom:16px">Escolha o que mostrar e o layout, e clique em <b>Aplicar a todos</b>: as opções são gravadas no portrait de todos os {{ agents|length }} agentes de uma vez (o OBS de cada um atualiza sozinho em alguns segundos). Isso substitui o que cada jogador tinha salvo, e cada um ainda pode mudar o dele depois na própria aba Portrait.</p>
+
+                    <div class="portrait-groups">
+                        <div class="portrait-group">
+                            <span class="portrait-group-label">Itens</span>
+                            <div class="portrait-chips" id="all-options">
+                                <label class="portrait-chip"><input type="checkbox" data-k="f"{{ ' checked' if my_opts.f != '0' }}><span>Foto</span></label>
+                                <label class="portrait-chip"><input type="checkbox" data-k="n"{{ ' checked' if my_opts.n != '0' }}><span>Nome</span></label>
+                                <label class="portrait-chip"><input type="checkbox" data-k="t"{{ ' checked' if my_opts.t != '0' }}><span>Título</span></label>
+                                <label class="portrait-chip"><input type="checkbox" data-k="x"{{ ' checked' if my_opts.x == '1' }}><span>NEX</span></label>
+                                <label class="portrait-chip" title="Símbolo do elemento de afinidade ao lado do nome (aparece a partir de 50% de NEX)"><input type="checkbox" data-k="e"{{ ' checked' if my_opts.e != '0' }}><span>Afinidade</span></label>
+                                <label class="portrait-chip"><input type="checkbox" data-k="s"{{ ' checked' if my_opts.s != '0' }}><span>Estado</span></label>
+                                <label class="portrait-chip"><input type="checkbox" data-k="pv"{{ ' checked' if my_opts.pv != '0' }}><span>PV</span></label>
+                            </div>
+                        </div>
+
+                        <div class="portrait-group">
+                            <span class="portrait-group-label">Layout</span>
+                            <div class="portrait-chips" id="all-layout">
+                                <label class="portrait-chip"><input type="radio" name="all-layout" value="h"{{ ' checked' if my_opts.l != 'v' }}><span>Horizontal</span></label>
+                                <label class="portrait-chip"><input type="radio" name="all-layout" value="v"{{ ' checked' if my_opts.l == 'v' }}><span>Vertical</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if preview_token %}
+                    <div class="portrait-stage">
+                        <iframe id="all-frame" width="560" height="240" title="Pré-visualização do layout"></iframe>
+                    </div>
+                    <p class="portrait-note">Pré-visualização com o portrait de <b>{{ agents[0]['name'] }}</b>. O fundo xadrez é só daqui: no OBS o fundo fica transparente.</p>
+                    {% endif %}
+
+                    <div class="portrait-save-row">
+                        <button type="button" id="all-save" class="portrait-primary"{{ ' disabled' if not agents }}>Aplicar a todos</button>
+                        <span id="all-status" class="portrait-save-status" role="status">{% if not agents %}Nenhum agente cadastrado ainda.{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">Portraits dos Agentes</div>
+                <p class="portrait-note">Link de OBS de cada agente. Para mudar a exibição, acrescente opções no final do link: <code>?l=v</code> (vertical), <code>?pv=0</code> (sem PV), <code>?f=0</code> (sem foto), <code>?n=0</code> (sem nome), <code>?t=0</code> (sem título), <code>?s=0</code> (sem estado), <code>?x=1</code> (mostrar o NEX), <code>?e=0</code> (sem o símbolo de afinidade). Para combinar, separe com <code>&amp;</code>.</p>
+                {% for a in agents %}
+                    <div class="portrait-agent-row">
+                        <div class="portrait-agent-name">{{ a['name'] }} ({{ a['username'] }})</div>
+                        <input type="text" readonly class="agent-link" data-token="{{ a['token'] }}" value="">
+                        <button type="button" class="agent-copy">Copiar</button>
+                        <form method="POST" action="{{ url_for('portrait_regenerate') }}"
+                              onsubmit="return confirm('Gerar um novo link para este agente? O link atual deixa de funcionar.');">
+                            <input type="hidden" name="user_id" value="{{ a['id'] }}">
+                            <button type="submit" class="btn-delete">Novo link</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <p class="empty">Nenhum agente cadastrado ainda.</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        <script>
+        (function() {
+            var base = location.origin + {{ url_for('portrait_stream', token='__T__')|tojson }};
+
+            function copyText(text, btn) {
+                var done = function() {
+                    var old = btn.textContent;
+                    btn.textContent = 'Copiado!';
+                    setTimeout(function() { btn.textContent = old; }, 1500);
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(done, function() { window.prompt('Copie o link:', text); });
+                } else {
+                    window.prompt('Copie o link:', text);
+                }
+            }
+
+            // ---- Meu portrait ----
+            var token = {{ my_token|tojson }};
+            if (token) {
+                var opts = document.querySelectorAll('#portrait-options input[type=checkbox]');
+                var layouts = document.querySelectorAll('input[name="portrait-layout"]');
+                var link = document.getElementById('portrait-link');
+                var open = document.getElementById('portrait-open');
+                var frame = document.getElementById('portrait-frame');
+                var hint = document.getElementById('size-hint');
+
+                function currentLayout() {
+                    var c = document.querySelector('input[name="portrait-layout"]:checked');
+                    return c ? c.value : 'h';
+                }
+
+                var saveBtn = document.getElementById('portrait-save');
+                var saveStatus = document.getElementById('portrait-save-status');
+                var baseUrl = base.replace('__T__', token);
+                var savedState = null;   // última configuração salva (texto)
+
+                // Configuração atual da tela, no mesmo formato que o servidor guarda
+                function currentOpts() {
+                    var o = {};
+                    opts.forEach(function(c) { o[c.dataset.k] = c.checked ? '1' : '0'; });
+                    o.l = currentLayout();
+                    return o;
+                }
+
+                function setStatus(text, dirty) {
+                    saveStatus.textContent = text;
+                    saveStatus.classList.toggle('dirty', !!dirty);
+                }
+
+                function refreshDirty() {
+                    var dirty = JSON.stringify(currentOpts()) !== savedState;
+                    saveBtn.disabled = !dirty;
+                    if (dirty) setStatus('Alterações não salvas: o OBS ainda mostra a versão anterior.', true);
+                    else if (!saveStatus.dataset.keep) setStatus('Salvo. O OBS já usa estas opções.', false);
+                }
+
+                function build() {
+                    var o = currentOpts();
+                    var vertical = o.l === 'v';
+                    // O link do OBS é sempre limpo (as opções ficam salvas no site).
+                    // A pré-visualização usa as opções da tela, mesmo as ainda não salvas.
+                    var params = Object.keys(o).map(function(k) { return k + '=' + o[k]; });
+                    link.value = baseUrl;
+                    open.href = baseUrl;
+                    frame.src = baseUrl + '?' + params.join('&');
+                    var w = vertical ? 340 : 560, h = vertical ? 480 : 240;
+                    frame.width = w; frame.height = h;
+                    hint.textContent = w + ' × ' + h;
+                    fitPreview();
+                    delete saveStatus.dataset.keep;
+                    refreshDirty();
+                }
+
+                // Em telas estreitas, reduz a pré-visualização para caber sem rolar para o lado
+                var stage = document.querySelector('.portrait-stage');
+                function fitPreview() {
+                    var w = parseInt(frame.width, 10), h = parseInt(frame.height, 10);
+                    var avail = stage.parentNode.clientWidth - 24;
+                    var k = Math.min(1, avail / w);
+                    frame.style.transform = k < 1 ? 'scale(' + k + ')' : '';
+                    stage.style.width = k < 1 ? (w * k + 24) + 'px' : '';
+                    stage.style.height = k < 1 ? (h * k + 24) + 'px' : '';
+                }
+                window.addEventListener('resize', fitPreview);
+
+                saveBtn.addEventListener('click', function() {
+                    var o = currentOpts();
+                    var body = new URLSearchParams(o);
+                    saveBtn.disabled = true;
+                    setStatus('Salvando…', false);
+                    fetch({{ url_for('portrait_save')|tojson }}, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: body.toString()
+                    }).then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+                      .then(function(d) {
+                          if (!d || !d.ok) return Promise.reject();
+                          savedState = JSON.stringify(o);
+                          saveStatus.dataset.keep = '1';
+                          setStatus('Salvo! O OBS atualiza sozinho em alguns segundos.', false);
+                          saveBtn.disabled = true;
+                      })
+                      .catch(function() {
+                          setStatus('Não foi possível salvar. Tente de novo.', true);
+                          saveBtn.disabled = false;
+                      });
+                });
+
+                // Estado inicial = o que já está salvo (vem marcado pelo servidor)
+                savedState = JSON.stringify(currentOpts());
+                opts.forEach(function(c) { c.addEventListener('change', build); });
+                layouts.forEach(function(r) { r.addEventListener('change', build); });
+                link.addEventListener('focus', function() { link.select(); });
+                document.getElementById('portrait-copy').addEventListener('click', function() { copyText(link.value, this); });
+                build();
+            }
+
+            // ---- Mestre: layout para todos os agentes ----
+            var allBox = document.getElementById('all-options');
+            if (allBox) {
+                var allOpts = allBox.querySelectorAll('input[type=checkbox]');
+                var allLayouts = document.querySelectorAll('input[name="all-layout"]');
+                var allFrame = document.getElementById('all-frame');
+                var allSave = document.getElementById('all-save');
+                var allStatus = document.getElementById('all-status');
+                var previewToken = {{ preview_token|tojson }};
+                var allSavedState = null;
+
+                function allCurrent() {
+                    var o = {};
+                    allOpts.forEach(function(c) { o[c.dataset.k] = c.checked ? '1' : '0'; });
+                    var l = document.querySelector('input[name="all-layout"]:checked');
+                    o.l = l ? l.value : 'h';
+                    return o;
+                }
+                function allBuild() {
+                    var o = allCurrent();
+                    if (allFrame && previewToken) {
+                        var vertical = o.l === 'v';
+                        var params = Object.keys(o).map(function(k) { return k + '=' + o[k]; });
+                        allFrame.src = base.replace('__T__', previewToken) + '?' + params.join('&');
+                        allFrame.width = vertical ? 340 : 560;
+                        allFrame.height = vertical ? 480 : 240;
+                        var stage = allFrame.parentNode, avail = stage.parentNode.clientWidth - 24, w = parseInt(allFrame.width, 10), h = parseInt(allFrame.height, 10);
+                        var k = Math.min(1, avail / w);
+                        allFrame.style.transform = k < 1 ? 'scale(' + k + ')' : '';
+                        stage.style.width = k < 1 ? (w * k + 24) + 'px' : '';
+                        stage.style.height = k < 1 ? (h * k + 24) + 'px' : '';
+                    }
+                    if (allSavedState !== null) {
+                        var dirty = JSON.stringify(o) !== allSavedState;
+                        allStatus.textContent = dirty ? 'Ainda não aplicado: os portraits dos agentes continuam como estavam.' : 'Aplicado a todos os agentes.';
+                        allStatus.classList.toggle('dirty', dirty);
+                    }
+                }
+                allOpts.forEach(function(c) { c.addEventListener('change', allBuild); });
+                allLayouts.forEach(function(r) { r.addEventListener('change', allBuild); });
+                window.addEventListener('resize', allBuild);
+                allBuild();
+
+                allSave.addEventListener('click', function() {
+                    var o = allCurrent();
+                    var n = {{ agents|length }};
+                    if (!confirm('Aplicar este layout aos ' + n + ' agente(s)? Isso substitui as opções que cada jogador salvou.')) return;
+                    var body = new URLSearchParams();
+                    Object.keys(o).forEach(function(k) { body.set(k, o[k]); });
+                    allSave.disabled = true;
+                    allStatus.textContent = 'Aplicando…'; allStatus.classList.remove('dirty');
+                    fetch({{ url_for('portrait_save_all')|tojson }}, { method: 'POST', body: body, credentials: 'same-origin' })
+                        .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+                        .then(function(d) {
+                            if (!d || !d.ok) return Promise.reject();
+                            allSavedState = JSON.stringify(o);
+                            allStatus.textContent = 'Aplicado a ' + d.updated + ' agente(s). O OBS de cada um atualiza em alguns segundos.';
+                            allStatus.classList.remove('dirty');
+                        })
+                        .catch(function() { allStatus.textContent = 'Não foi possível aplicar. Tente de novo.'; allStatus.classList.add('dirty'); })
+                        .then(function() { allSave.disabled = false; });
+                });
+                allSavedState = JSON.stringify(allCurrent());   // estado inicial = último layout aplicado
+                allStatus.textContent = allStatus.textContent || '';
+            }
+
+            // ---- Mestre: links de todos os agentes ----
+            document.querySelectorAll('.agent-link').forEach(function(inp) {
+                inp.value = base.replace('__T__', inp.dataset.token);
+            });
+            document.querySelectorAll('.agent-copy').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var inp = btn.parentNode.querySelector('.agent-link');
+                    copyText(inp.value, btn);
+                });
+            });
+        })();
+        </script>
+        {% include '_chat_dock.html' %}
+    </body>
+</html>
